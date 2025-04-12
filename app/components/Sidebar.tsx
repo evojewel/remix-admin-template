@@ -24,6 +24,14 @@ const NAV_ITEMS = [
     href: "/dashboard/user",
   },
   {
+    label: "Token Generator",
+    href: "/dashboard/token",
+  },
+  {
+    label: "Breakout Strategy",
+    href: "/dashboard/breakout",
+  },
+  {
     label: "Remix on Netlify",
     href: "https://docs.netlify.com/frameworks/remix/",
     newTab: true,
