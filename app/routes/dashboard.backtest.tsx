@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import type { MetaFunction } from "@remix-run/node";
 import { useNavigation } from "@remix-run/react";
 import Button from "~/components/Button";
@@ -7,10 +7,8 @@ export const meta: MetaFunction = () => {
   return [{ title: "Backtest Nifty Strategy | Admin Dashboard" }];
 };
 
-// Define API URL based on environment
-const API_URL = window.location.hostname === "localhost" 
-  ? "http://localhost:3001"
-  : "https://your-production-api.com"; // Update with your production API URL
+// Define API URL based on environment - but use useEffect for window access
+let API_URL = "http://localhost:3001"; // Default value during server-side rendering
 
 interface Symbol {
   instrument_token: number;
@@ -102,21 +100,14 @@ export default function BacktestStrategy() {
   const [isSearching, setIsSearching] = useState(false);
   const [selectedSymbol, setSelectedSymbol] = useState<Symbol | null>(null);
   
-  // Check API status on mount
+  // Set API URL based on environment but only in the browser
   useEffect(() => {
-    const checkApiStatus = async () => {
-      try {
-        const response = await fetch(`${API_URL}/`);
-        if (response.ok) {
-          setApiStatus("online");
-        } else {
-          setApiStatus("offline");
-        }
-      } catch (error) {
-        setApiStatus("offline");
-      }
-    };
-    
+    // Set API URL based on window.location (client-side only)
+    API_URL = window.location.hostname === "localhost" 
+      ? "http://localhost:3001"
+      : "https://your-production-api.com"; // Update with your production API URL
+      
+    // Check API status on mount
     checkApiStatus();
   }, []);
   
@@ -219,7 +210,15 @@ export default function BacktestStrategy() {
   };
   
   // Function to generate mock data
-  const generateMockBacktestData = (startDate, endDate, xTime, yTime, entryTime, stopLoss, target) => {
+  const generateMockBacktestData = (
+    startDate: string, 
+    endDate: string, 
+    xTime: string, 
+    yTime: string, 
+    entryTime: string, 
+    stopLoss: number, 
+    target: number
+  ) => {
     const start = new Date(startDate);
     const end = new Date(endDate);
     const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
@@ -365,6 +364,20 @@ export default function BacktestStrategy() {
     setInstrument(symbol.instrument_token);
     setSearchTerm('');
     setSymbols([]);
+  };
+  
+  // Check API status on mount
+  const checkApiStatus = async () => {
+    try {
+      const response = await fetch(`${API_URL}/`);
+      if (response.ok) {
+        setApiStatus("online");
+      } else {
+        setApiStatus("offline");
+      }
+    } catch (error) {
+      setApiStatus("offline");
+    }
   };
   
   return (
