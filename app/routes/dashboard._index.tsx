@@ -1,5 +1,7 @@
 import type { ActionFunctionArgs, MetaFunction } from "@remix-run/node";
 import { Link, useFetcher, useLoaderData } from "@remix-run/react";
+import { redirect } from "@remix-run/node";
+import type { LoaderFunction } from "@remix-run/node";
 
 import Button from "~/components/Button";
 import { GlobalErrorBoundary } from "~/components/GlobalErrorBoundary";
@@ -41,19 +43,10 @@ export async function action({ request }: ActionFunctionArgs) {
   return Response.json({ message: "Member deleted successfully" });
 }
 
-export async function loader() {
-  const supabase = getSupabaseClient();
-  const { data: members, error } = await supabase
-    .from("members")
-    .select("*")
-    .order("created_at", { ascending: true });
-
-  if (error) {
-    throw new Response(error.message, { status: 500 });
-  }
-
-  return Response.json({ members });
-}
+export const loader: LoaderFunction = () => {
+  // Redirect to the breakout strategy page
+  return redirect("/dashboard/breakout");
+};
 
 export default function MemberList() {
   const { members } = useLoaderData<{ members: Member[] }>();
