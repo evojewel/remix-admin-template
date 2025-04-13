@@ -246,10 +246,29 @@ export default function HistoricalData() {
               {symbols.map((symbol) => (
                 <div
                   key={symbol.instrument_token}
-                  className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                  className="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100"
                   onClick={() => handleSelectSymbol(symbol)}
                 >
-                  {symbol.tradingsymbol} - {symbol.name}
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="font-medium text-gray-900">{symbol.tradingsymbol}</div>
+                      <div className="text-sm text-gray-500">{symbol.name}</div>
+                    </div>
+                    <div className="text-right">
+                      {symbol.expiry && (
+                        <div className="text-sm text-gray-500">Expiry: {symbol.expiry}</div>
+                      )}
+                      {symbol.strike && (
+                        <div className="text-sm text-gray-500">Strike: {symbol.strike}</div>
+                      )}
+                      {symbol.lot_size && (
+                        <div className="text-sm text-gray-500">Lot Size: {symbol.lot_size}</div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="mt-1 text-xs text-gray-400">
+                    {symbol.instrument_type} • {symbol.segment}
+                  </div>
                 </div>
               ))}
             </div>

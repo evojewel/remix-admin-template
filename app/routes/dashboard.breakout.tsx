@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~
 import { Input } from "~/components/ui/input";
 import { useToast } from "~/components/ui/use-toast";
 import { api, getWebSocketUrl } from "~/lib/api-client";
+import { TradingViewChart } from "~/app/components/ui/tradingview-chart";
 
 export const meta: MetaFunction = () => {
   return [{ title: "Nifty Breakout Strategy | Admin Dashboard" }];
@@ -194,13 +195,13 @@ export default function BreakoutStrategy() {
         // Fetch trade history
         const tradesData = await api.getTrades();
         console.log("Trade history:", tradesData);
-        setTrades(tradesData);
+        setTrades(tradesData.trades || []);  // Extract the trades array from the response
         
       } catch (error) {
         console.error("Error fetching initial data:", error);
         toast({
           title: "Error",
-          description: "Failed to fetch initial data. Is the API server running?",
+          description: "Failed to fetch initial data. Please try again.",
           variant: "destructive",
         });
       } finally {
@@ -211,7 +212,7 @@ export default function BreakoutStrategy() {
     if (apiStatus === 'online') {
       fetchInitialData();
     }
-  }, [apiStatus]); // Only run when apiStatus changes
+  }, [apiStatus]); // Run when API status changes
 
   // Add exchange selection to the form
   const handleExchangeChange = async (value: string) => {
@@ -515,29 +516,15 @@ export default function BreakoutStrategy() {
         </div>
         
         {/* Price Chart Panel */}
-        <div className="p-6 bg-white rounded-xl shadow-md">
-          <h2 className="mb-4 text-lg font-medium text-slate-900">Nifty Chart</h2>
-          
-          <div className="flex items-center justify-center h-60 bg-slate-50 rounded-lg">
-            <p className="text-slate-400">
-              Chart will appear when trading is active
-            </p>
-          </div>
-          
-          <div className="mt-4">
-            <h3 className="mb-2 text-sm font-medium text-slate-700">Market Overview</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="p-3 bg-slate-50 rounded-lg">
-                <div className="text-xs text-slate-500">Nifty 50</div>
-                <div className="text-lg font-medium text-slate-900">22,828.55</div>
-                <div className="text-xs text-green-600">+0.42%</div>
-              </div>
-              <div className="p-3 bg-slate-50 rounded-lg">
-                <div className="text-xs text-slate-500">Bank Nifty</div>
-                <div className="text-lg font-medium text-slate-900">48,945.70</div>
-                <div className="text-xs text-red-600">-0.18%</div>
-              </div>
-            </div>
+        <div className="bg-white rounded-lg shadow p-4">
+          <h3 className="text-lg font-semibold mb-4">Price Chart</h3>
+          <div className="h-[400px]">
+            <TradingViewChart 
+              symbol="NSE:NIFTY" 
+              interval="1"
+              theme="light"
+              height={400}
+            />
           </div>
         </div>
       </div>
