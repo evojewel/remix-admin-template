@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import type { MetaFunction } from "@remix-run/node";
 import { useNavigation } from "@remix-run/react";
-import Button from "~/components/ui/button";
+import { Button } from "~/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Label } from "~/components/ui/label";
 

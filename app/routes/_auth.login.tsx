@@ -8,8 +8,9 @@ import { Form, Link, useActionData, useNavigation } from "@remix-run/react";
 
 import { createUserSession, getSession } from "../session.server";
 
-import Button from "~/components/ui/button";
-import TextField from "~/components/TextField";
+import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
 
 export const meta: MetaFunction = () => {
   return [
@@ -60,20 +61,26 @@ export default function LogIn() {
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white px-4 py-8 shadow sm:rounded-lg sm:px-10">
           <Form method="post" className="space-y-6">
-            <TextField
-              id="email"
-              name="email"
-              type="email"
-              label="Email address"
-              required
-            />
-            <TextField
-              id="password"
-              name="password"
-              type="password"
-              label="Password"
-              required
-            />
+            <div className="space-y-2">
+              <Label htmlFor="email">Email address</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                required
+                className="w-full"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                required
+                className="w-full"
+              />
+            </div>
 
             {actionData?.error && (
               <div className="text-sm text-red-600">{actionData.error}</div>

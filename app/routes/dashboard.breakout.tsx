@@ -7,13 +7,11 @@ import { Label } from "~/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Input } from "~/components/ui/input";
 import { useToast } from "~/components/ui/use-toast";
+import { api, getWebSocketUrl } from "~/lib/api-client";
 
 export const meta: MetaFunction = () => {
   return [{ title: "Nifty Breakout Strategy | Admin Dashboard" }];
 };
-
-// API server URL - will be updated client-side
-let API_URL = 'http://localhost:3001';
 
 export default function BreakoutStrategy() {
   const navigation = useNavigation();
@@ -60,78 +58,102 @@ export default function BreakoutStrategy() {
   
   // Add exchange state
   const [selectedExchange, setSelectedExchange] = useState("NFO");
-  const [exchanges, setExchanges] = useState<Array<{code: string, name: string}>>([]);
+  const [exchanges, setExchanges] = useState<Array<{code: string, name: string}>>([
+    { code: "NFO", name: "NFO - Futures & Options" },
+    { code: "NSE", name: "NSE - Equity" },
+    { code: "BSE", name: "BSE - Equity" }
+  ]);
   
   const { toast } = useToast();
   
   // Add loading state
   const [isLoading, setIsLoading] = useState(false);
   
-  // Separate WebSocket setup effect
+  // Modify the WebSocket setup effect
   useEffect(() => {
-    // Set API URL based on window.location (client-side only)
-    API_URL = window.location.hostname === "localhost" 
-      ? "http://localhost:3001"
-      : "https://your-production-api.com";
-
     // Set up WebSocket connection
-    const ws = new WebSocket(`ws://${API_URL.replace('http://', '')}/ws`);
-    
-    ws.onopen = () => {
-      console.log("WebSocket connected");
-      setWsConnection(ws);
-    };
-    
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.type === "initial_state" || data.type === "status_update") {
-        const { strategy, trading, market_status } = data.data;
-        setIsRunning(strategy.is_running);
-        setMarketStatus(market_status);
-        setHighestHigh(trading.highest_high);
-        setLowestLow(trading.lowest_low);
-        setCurrentPrice(trading.current_price);
-        setCurrentPosition(trading.current_position);
-        setTradingState(trading);
-        setStrategyConfig(strategy);
-      }
-    };
-    
-    ws.onerror = (error) => {
-      console.error("WebSocket error:", error);
+    try {
+      const wsUrl = getWebSocketUrl();
+      console.log("Connecting to WebSocket:", wsUrl);
+      const ws = new WebSocket(wsUrl);
+      
+      ws.onopen = () => {
+        console.log("WebSocket connected");
+        setWsConnection(ws);
+        // When WebSocket connects, update API status
+        setApiStatus("online");
+        toast({
+          title: "Connected",
+          description: "WebSocket connection established",
+        });
+      };
+      
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          console.log("WebSocket message:", data);
+          if (data.type === "initial_state" || data.type === "status_update") {
+            const { strategy, trading, market_status } = data.data;
+            setIsRunning(strategy.is_running);
+            setMarketStatus(market_status);
+            setHighestHigh(trading.highest_high);
+            setLowestLow(trading.lowest_low);
+            setCurrentPrice(trading.current_price);
+            setCurrentPosition(trading.current_position);
+            setTradingState(trading);
+            setStrategyConfig(strategy);
+          }
+        } catch (error) {
+          console.error("Error parsing WebSocket message:", error);
+        }
+      };
+      
+      ws.onerror = (error) => {
+        console.error("WebSocket error:", error);
+        setApiStatus("offline");
+        toast({
+          title: "Connection Error",
+          description: "Failed to connect to WebSocket. Is the API server running?",
+          variant: "destructive",
+        });
+      };
+      
+      ws.onclose = () => {
+        console.log("WebSocket disconnected");
+        setApiStatus("offline");
+        setWsConnection(null);
+      };
+
+      return () => {
+        ws.close();
+      };
+    } catch (error) {
+      console.error("Error setting up WebSocket:", error);
       setApiStatus("offline");
       toast({
-        title: "WebSocket Error",
-        description: "Failed to connect to WebSocket",
+        title: "Connection Error",
+        description: "Failed to set up WebSocket. Is the API server running?",
         variant: "destructive",
       });
-    };
-    
-    ws.onclose = () => {
-      console.log("WebSocket disconnected");
-      setApiStatus("offline");
-      setWsConnection(null);
-    };
-
-    return () => {
-      ws.close();
-    };
+    }
   }, []); // Empty dependency array - only run once on mount
 
   // Separate API status check effect
   useEffect(() => {
     const checkApiStatus = async () => {
       try {
-        const response = await fetch(`${API_URL}/api-status`);
-        if (response.ok) {
-          const data = await response.json();
-          setApiStatus(data.status);
-        } else {
-          setApiStatus("offline");
-        }
+        console.log("Checking API status...");
+        const data = await api.checkStatus();
+        console.log("API status response:", data);
+        setApiStatus(data.status);
       } catch (error) {
-        setApiStatus("offline");
         console.error('API status check failed:', error);
+        setApiStatus("offline");
+        toast({
+          title: "API Error",
+          description: "Cannot connect to API server. Is it running?",
+          variant: "destructive",
+        });
       }
     };
 
@@ -147,9 +169,10 @@ export default function BreakoutStrategy() {
       
       setIsLoading(true);
       try {
+        console.log("Fetching initial data...");
         // Fetch status
-        const statusResponse = await fetch(`${API_URL}/status`);
-        const statusData = await statusResponse.json();
+        const statusData = await api.getStrategyStatus();
+        console.log("Strategy status:", statusData);
         
         // Update UI with status data
         const { strategy, trading } = statusData;
@@ -169,15 +192,15 @@ export default function BreakoutStrategy() {
         setMarketStatus(trading.market_status);
         
         // Fetch trade history
-        const tradesResponse = await fetch(`${API_URL}/trades`);
-        const tradesData = await tradesResponse.json();
+        const tradesData = await api.getTrades();
+        console.log("Trade history:", tradesData);
         setTrades(tradesData);
         
       } catch (error) {
         console.error("Error fetching initial data:", error);
         toast({
           title: "Error",
-          description: "Failed to fetch initial data",
+          description: "Failed to fetch initial data. Is the API server running?",
           variant: "destructive",
         });
       } finally {
@@ -185,7 +208,9 @@ export default function BreakoutStrategy() {
       }
     };
 
-    fetchInitialData();
+    if (apiStatus === 'online') {
+      fetchInitialData();
+    }
   }, [apiStatus]); // Only run when apiStatus changes
 
   // Add exchange selection to the form
@@ -193,18 +218,7 @@ export default function BreakoutStrategy() {
     setSelectedExchange(value);
     // Update strategy with new exchange
     try {
-      const response = await fetch(`${API_URL}/update-config`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          exchange: value,
-        }),
-      });
-      if (!response.ok) {
-        throw new Error('Failed to update exchange');
-      }
+      await api.updateConfig({ exchange: value });
     } catch (error) {
       console.error('Error updating exchange:', error);
       toast({
@@ -218,29 +232,20 @@ export default function BreakoutStrategy() {
   // Add back the missing functions
   const applyParameters = async () => {
     try {
-      const response = await fetch(`${API_URL}/config`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          x_time: xTime,
-          y_time: yTime,
-          entry_time: entryTime,
-          stop_loss: stopLoss,
-          target: target,
-          lot_size: lotSize,
-          exchange: selectedExchange, // Add exchange to config
-        }),
+      await api.updateConfig({
+        x_time: xTime,
+        y_time: yTime,
+        entry_time: entryTime,
+        stop_loss: stopLoss,
+        target: target,
+        lot_size: lotSize,
+        exchange: selectedExchange,
       });
       
-      if (response.ok) {
-        // Config will be updated via WebSocket
-        toast({
-          title: "Success",
-          description: "Strategy parameters updated successfully",
-        });
-      }
+      toast({
+        title: "Success",
+        description: "Strategy parameters updated successfully",
+      });
     } catch (error) {
       console.error("Error updating strategy parameters:", error);
       toast({
@@ -253,24 +258,12 @@ export default function BreakoutStrategy() {
 
   const toggleTrading = async () => {
     try {
-      const response = await fetch(`${API_URL}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          is_running: !isRunning,
-          exchange: selectedExchange, // Add exchange to status update
-        }),
-      });
+      await api.updateStatus(!isRunning, selectedExchange);
       
-      if (response.ok) {
-        // Status will be updated via WebSocket
-        toast({
-          title: "Success",
-          description: `Trading ${!isRunning ? 'started' : 'stopped'} successfully`,
-        });
-      }
+      toast({
+        title: "Success",
+        description: `Trading ${!isRunning ? 'started' : 'stopped'} successfully`,
+      });
     } catch (error) {
       console.error("Error toggling trading status:", error);
       toast({

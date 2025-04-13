@@ -1,68 +1,84 @@
-import type { MetaFunction } from "@remix-run/node";
 import { Form, Link, useNavigation, useSearchParams } from "@remix-run/react";
+import type { MetaFunction } from "@remix-run/node";
 
-import Button from "~/components/ui/button";
-import TextField from "~/components/TextField";
+import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
 
 export const meta: MetaFunction = () => {
   return [
     {
-      title: "Sign Up | Remix Dashboard",
+      title: "Sign Up | Kite Admin",
     },
   ];
 };
 
 export default function SignUp() {
   const navigation = useNavigation();
+  const isSubmitting = navigation.state === "submitting";
   const [searchParams] = useSearchParams();
 
-  const isSubmitting = navigation.state === "submitting";
-
   return (
-    <div className="w-full max-w-2xl px-8 py-10 space-y-8 bg-white shadow-md rounded-xl lg:space-y-10 lg:px-10 lg:py-12 ">
-      <div className="space-y-3">
-        <h1 className="text-2xl font-semibold text-slate-900 sm:text-3xl lg:text-4xl">
-          Sign Up for Remix Dashboard
-        </h1>
-        <p className="text-sm">
-          Already have an account?{" "}
-          <Link
-            className="underline text-cyan-600"
-            to={{
-              pathname: "/login",
-              search: searchParams.toString(),
-            }}
-          >
-            Sign in
-          </Link>
-        </p>
+    <div className="flex min-h-screen flex-col justify-center py-12 sm:px-6 lg:px-8">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">
+          Create a new account
+        </h2>
       </div>
-      <Form method="POST">
-        <fieldset
-          className="w-full space-y-4 lg:space-y-6 disabled:opacity-70"
-          disabled={isSubmitting}
-        >
-          <TextField
-            id="name"
-            name="name"
-            label="Name"
-            required
-            type="text"
-            placeholder="Name Surname"
-          />
-          <TextField
-            id="password"
-            name="password"
-            label="Password"
-            required
-            type="password"
-            placeholder="password"
-          />
-          <Button type="submit" className="w-full" loading={isSubmitting}>
-            Login
-          </Button>
-        </fieldset>
-      </Form>
+
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-white px-4 py-8 shadow sm:rounded-lg sm:px-10">
+          <Form method="post" className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email address</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                className="w-full"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="new-password"
+                required
+                className="w-full"
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="text-sm">
+                <Link
+                  to={{
+                    pathname: "/login",
+                    search: searchParams.toString(),
+                  }}
+                  className="font-medium text-indigo-600 hover:text-indigo-500"
+                >
+                  Already have an account?
+                </Link>
+              </div>
+            </div>
+
+            <div>
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Creating account..." : "Create account"}
+              </Button>
+            </div>
+          </Form>
+        </div>
+      </div>
     </div>
   );
 }
