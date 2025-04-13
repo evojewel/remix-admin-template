@@ -21,9 +21,10 @@ export default function TokenGeneration() {
     // Check API status
     const checkApiStatus = async () => {
       try {
-        const response = await fetch(`${process.env.API_BASE_URL || 'http://localhost:3001'}/`);
+        const response = await fetch(`${process.env.API_BASE_URL || 'http://localhost:3001'}/api-status`);
         if (response.ok) {
-          setApiStatus("online");
+          const data = await response.json();
+          setApiStatus(data.status);
         } else {
           setApiStatus("offline");
         }
@@ -33,6 +34,13 @@ export default function TokenGeneration() {
     };
     
     checkApiStatus();
+    
+    // Set up periodic check every 30 seconds
+    const statusInterval = setInterval(checkApiStatus, 30000);
+    
+    return () => {
+      clearInterval(statusInterval);
+    };
   }, []);
 
   const generateLoginUrl = () => {
@@ -70,29 +78,26 @@ export default function TokenGeneration() {
           </div>
           
           <div className="mb-6">
-            <div className="flex items-center mb-2">
-              <div 
-                className={`w-2 h-2 mr-2 rounded-full ${
-                  apiStatus === "checking" ? "bg-yellow-500" :
-                  apiStatus === "online" ? "bg-green-500" : "bg-red-500"
-                }`}
-              ></div>
-              <p className="text-sm text-slate-600">
-                API Server Status: 
-                <span className={
-                  apiStatus === "checking" ? "text-yellow-600" :
-                  apiStatus === "online" ? "text-green-600" : "text-red-600"
-                }>
-                  {" "}{apiStatus === "checking" ? "Checking..." : 
-                     apiStatus === "online" ? "Online" : "Offline"}
-                </span>
-                {apiStatus === "offline" && (
-                  <span className="ml-2 text-red-600">
-                    (Make sure to start the backend API server)
-                  </span>
-                )}
-              </p>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-700">API Status:</span>
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                apiStatus === "online" ? "bg-green-100 text-green-800" :
+                apiStatus === "offline" ? "bg-red-100 text-red-800" :
+                "bg-yellow-100 text-yellow-800"
+              }`}>
+                {apiStatus === "online" ? "Online" :
+                 apiStatus === "offline" ? "Offline" :
+                 "Checking..."}
+              </span>
             </div>
+            
+            {apiStatus === "offline" && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
+                <p className="text-sm text-red-700">
+                  The API server is offline. Please ensure the API server is running before proceeding.
+                </p>
+              </div>
+            )}
             
             <div className="mb-4">
               <label htmlFor="apiKey" className="block mb-1 text-sm font-medium text-slate-700">
@@ -101,6 +106,7 @@ export default function TokenGeneration() {
               <input
                 type="text"
                 id="apiKey"
+                name="apiKey"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
                 className="block w-full px-3 py-2 border rounded-md border-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
@@ -115,6 +121,7 @@ export default function TokenGeneration() {
               <input
                 type="text"
                 id="redirectUri"
+                name="redirectUri"
                 value={redirectUri}
                 onChange={(e) => setRedirectUri(e.target.value)}
                 className="block w-full px-3 py-2 border rounded-md border-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
@@ -126,15 +133,22 @@ export default function TokenGeneration() {
             </div>
           </div>
           
-          <div className="flex justify-center">
+          <div className="flex gap-3">
+            <Button
+              type="submit"
+              disabled={isSubmitting || apiStatus !== "online"}
+              className="w-full"
+            >
+              {isSubmitting ? "Generating..." : "Generate Token"}
+            </Button>
+            
             <a
               href={generateLoginUrl()}
-              className={`flex items-center justify-center w-full px-4 py-2 text-sm font-medium text-white rounded-md ${
-                apiStatus === "online" 
-                  ? "bg-cyan-600 hover:bg-cyan-700" 
-                  : "bg-slate-400 cursor-not-allowed"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`inline-flex justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
+                apiStatus !== "online" ? "opacity-50 cursor-not-allowed" : ""
               }`}
-              disabled={isSubmitting || !apiKey || !redirectUri || apiStatus !== "online"}
               onClick={(e) => {
                 if (apiStatus !== "online") {
                   e.preventDefault();
@@ -142,7 +156,7 @@ export default function TokenGeneration() {
                 }
               }}
             >
-              {isSubmitting ? "Processing..." : "Authorize with Kite Connect"}
+              Authorize
             </a>
           </div>
           

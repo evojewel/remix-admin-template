@@ -2,13 +2,18 @@ import { useState, useEffect } from "react";
 import type { MetaFunction } from "@remix-run/node";
 import { useNavigation } from "@remix-run/react";
 import Button from "~/components/Button";
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { Label } from "~/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
+import { Input } from "~/components/ui/input";
+import { useToast } from "~/components/ui/use-toast";
 
 export const meta: MetaFunction = () => {
   return [{ title: "Nifty Breakout Strategy | Admin Dashboard" }];
 };
 
-// API server URL
-const API_URL = process.env.API_URL || 'http://localhost:3001';
+// API server URL - will be updated client-side
+let API_URL = 'http://localhost:3001';
 
 export default function BreakoutStrategy() {
   const navigation = useNavigation();
@@ -34,229 +39,243 @@ export default function BreakoutStrategy() {
   const [trades, setTrades] = useState<any[]>([]);
   
   // API status
-  const [apiStatus, setApiStatus] = useState("checking");
-  const [lastCheckTime, setLastCheckTime] = useState<Date | null>(null);
+  const [apiStatus, setApiStatus] = useState<'online' | 'offline' | 'checking'>('checking');
+  const [wsConnection, setWsConnection] = useState<WebSocket | null>(null);
+  const [tradingState, setTradingState] = useState({
+    highest_high: null,
+    lowest_low: null,
+    current_price: null,
+    current_position: "NONE",
+    market_status: "CLOSED"
+  });
+  const [strategyConfig, setStrategyConfig] = useState({
+    x_time: "11:00",
+    y_time: "14:30",
+    entry_time: "09:15",
+    stop_loss: 50.0,
+    target: 100.0,
+    lot_size: 1,
+    is_running: false,
+  });
   
-  // Fetch initial data and set up websocket
+  // Add exchange state
+  const [selectedExchange, setSelectedExchange] = useState("NFO");
+  const [exchanges, setExchanges] = useState<Array<{code: string, name: string}>>([]);
+  
+  const { toast } = useToast();
+  
+  // Separate WebSocket setup effect
   useEffect(() => {
-    // Check API status
+    // Set API URL based on window.location (client-side only)
+    API_URL = window.location.hostname === "localhost" 
+      ? "http://localhost:3001"
+      : "https://your-production-api.com";
+
+    // Set up WebSocket connection
+    const ws = new WebSocket(`ws://${API_URL.replace('http://', '')}/ws`);
+    
+    ws.onopen = () => {
+      console.log("WebSocket connected");
+      setWsConnection(ws);
+    };
+    
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === "initial_state" || data.type === "status_update") {
+        const { strategy, trading, market_status } = data.data;
+        setIsRunning(strategy.is_running);
+        setMarketStatus(market_status);
+        setHighestHigh(trading.highest_high);
+        setLowestLow(trading.lowest_low);
+        setCurrentPrice(trading.current_price);
+        setCurrentPosition(trading.current_position);
+        setTradingState(trading);
+        setStrategyConfig(strategy);
+      }
+    };
+    
+    ws.onerror = (error) => {
+      console.error("WebSocket error:", error);
+      setApiStatus("offline");
+      toast({
+        title: "WebSocket Error",
+        description: "Failed to connect to WebSocket",
+        variant: "destructive",
+      });
+    };
+    
+    ws.onclose = () => {
+      console.log("WebSocket disconnected");
+      setApiStatus("offline");
+      setWsConnection(null);
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, []); // Empty dependency array - only run once on mount
+
+  // Separate API status check effect
+  useEffect(() => {
     const checkApiStatus = async () => {
       try {
-        const response = await fetch(`${API_URL}/`, {
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          }
-        });
-        
+        const response = await fetch(`${API_URL}/api-status`);
         if (response.ok) {
-          setApiStatus("online");
-          setLastCheckTime(new Date());
-          // If API is online, fetch initial data
-          await fetchInitialData();
-          // Set up WebSocket connection
-          setupWebSocket();
+          const data = await response.json();
+          setApiStatus(data.status);
         } else {
           setApiStatus("offline");
-          console.error("API returned error status:", response.status);
         }
       } catch (error) {
         setApiStatus("offline");
-        console.error("Error checking API status:", error);
+        console.error('API status check failed:', error);
       }
     };
-    
-    // Initial check
+
     checkApiStatus();
-    
-    // Set up periodic check every 30 seconds
-    const statusInterval = setInterval(checkApiStatus, 30000);
-    
-    // Clean up intervals and WebSocket on unmount
-    return () => {
-      clearInterval(statusInterval);
-      if (window.strategySocket) {
-        window.strategySocket.close();
+    const interval = setInterval(checkApiStatus, 30000);
+    return () => clearInterval(interval);
+  }, []); // Empty dependency array - only run once on mount
+
+  // Separate initial data fetch effect
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      try {
+        // Fetch status
+        const statusResponse = await fetch(`${API_URL}/status`);
+        const statusData = await statusResponse.json();
+        
+        // Update UI with status data
+        const { strategy, trading } = statusData;
+        
+        setXTime(strategy.x_time);
+        setYTime(strategy.y_time);
+        setEntryTime(strategy.entry_time);
+        setStopLoss(strategy.stop_loss);
+        setTarget(strategy.target);
+        setLotSize(strategy.lot_size);
+        setIsRunning(strategy.is_running);
+        
+        setHighestHigh(trading.highest_high);
+        setLowestLow(trading.lowest_low);
+        setCurrentPrice(trading.current_price);
+        setCurrentPosition(trading.current_position);
+        setMarketStatus(trading.market_status);
+        
+        // Fetch trade history
+        const tradesResponse = await fetch(`${API_URL}/trades`);
+        const tradesData = await tradesResponse.json();
+        setTrades(tradesData);
+        
+      } catch (error) {
+        console.error("Error fetching initial data:", error);
       }
     };
-  }, []);
-  
-  const fetchInitialData = async () => {
+
+    if (apiStatus === 'online') {
+      fetchInitialData();
+    }
+  }, [apiStatus]); // Only run when apiStatus changes
+
+  // Add exchange selection to the form
+  const handleExchangeChange = async (value: string) => {
+    setSelectedExchange(value);
+    // Update strategy with new exchange
     try {
-      // Fetch status
-      const statusResponse = await fetch(`${API_URL}/status`);
-      const statusData = await statusResponse.json();
-      
-      // Update UI with status data
-      const { strategy, trading } = statusData;
-      
-      setXTime(strategy.x_time);
-      setYTime(strategy.y_time);
-      setEntryTime(strategy.entry_time);
-      setStopLoss(strategy.stop_loss);
-      setTarget(strategy.target);
-      setLotSize(strategy.lot_size);
-      setIsRunning(strategy.is_running);
-      
-      setHighestHigh(trading.highest_high);
-      setLowestLow(trading.lowest_low);
-      setCurrentPrice(trading.current_price);
-      setCurrentPosition(trading.current_position);
-      setMarketStatus(trading.market_status);
-      
-      // Fetch trade history
-      const tradesResponse = await fetch(`${API_URL}/trades`);
-      const tradesData = await tradesResponse.json();
-      setTrades(tradesData);
-      
-    } catch (error) {
-      console.error("Error fetching initial data:", error);
-    }
-  };
-  
-  const setupWebSocket = () => {
-    const socket = new WebSocket(`ws://${API_URL.replace('http://', '')}/ws`);
-    
-    socket.onopen = () => {
-      console.log("WebSocket connected");
-    };
-    
-    socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      
-      // Handle different message types
-      if (data.type === "initial_state") {
-        updateUIFromData(data.data);
-      } else if (data.type === "status_update") {
-        updateUIFromData(data.data);
-      } else if (data.type === "config_update") {
-        // Update just the config parameters
-        const config = data.data;
-        setXTime(config.x_time);
-        setYTime(config.y_time);
-        setEntryTime(config.entry_time);
-        setStopLoss(config.stop_loss);
-        setTarget(config.target);
-        setLotSize(config.lot_size);
-        setIsRunning(config.is_running);
-      }
-    };
-    
-    socket.onerror = (error) => {
-      console.error("WebSocket error:", error);
-    };
-    
-    socket.onclose = () => {
-      console.log("WebSocket closed");
-    };
-    
-    // Store socket reference
-    window.strategySocket = socket;
-  };
-  
-  const updateUIFromData = (data: any) => {
-    // Update from a combined data object (like initial_state or status_update)
-    if (data.strategy) {
-      const strategy = data.strategy;
-      setXTime(strategy.x_time);
-      setYTime(strategy.y_time);
-      setEntryTime(strategy.entry_time);
-      setStopLoss(strategy.stop_loss);
-      setTarget(strategy.target);
-      setLotSize(strategy.lot_size);
-      setIsRunning(strategy.is_running);
-    }
-    
-    if (data.trading) {
-      const trading = data.trading;
-      setHighestHigh(trading.highest_high);
-      setLowestLow(trading.lowest_low);
-      setCurrentPrice(trading.current_price);
-      setCurrentPosition(trading.current_position);
-      setMarketStatus(trading.market_status);
-    }
-    
-    if (data.trades) {
-      setTrades(data.trades);
-    }
-  };
-  
-  // Start/stop trading
-  const toggleTrading = async () => {
-    try {
-      const response = await fetch(`${API_URL}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ is_running: !isRunning }),
-      });
-      
-      if (response.ok) {
-        // Status will be updated via WebSocket
-      }
-    } catch (error) {
-      console.error("Error toggling trading status:", error);
-    }
-  };
-  
-  // Apply strategy parameters
-  const applyParameters = async () => {
-    try {
-      const response = await fetch(`${API_URL}/config`, {
-        method: 'PUT',
+      const response = await fetch(`${API_URL}/update-config`, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          x_time: xTime,
-          y_time: yTime,
-          entry_time: entryTime,
-          stop_loss: stopLoss,
-          target: target,
-          lot_size: lotSize,
+          exchange: value,
         }),
       });
-      
-      if (response.ok) {
-        // Config will be updated via WebSocket
+      if (!response.ok) {
+        throw new Error('Failed to update exchange');
       }
     } catch (error) {
-      console.error("Error updating strategy parameters:", error);
+      console.error('Error updating exchange:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update exchange",
+        variant: "destructive",
+      });
     }
   };
-
+  
   return (
-    <>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold text-slate-900 lg:text-3xl">
-          Nifty Breakout Strategy
-        </h1>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center">
-            <div 
-              className={`w-3 h-3 mr-2 rounded-full ${
-                apiStatus === "checking" ? "bg-yellow-500" :
-                apiStatus === "online" ? "bg-green-500" : "bg-red-500"
-              }`}
-            ></div>
-            <span className="text-sm text-slate-600">
-              API Status: {apiStatus === "checking" ? "Checking..." : 
-                           apiStatus === "online" ? "Online" : "Offline"}
-            </span>
+    <div className="container mx-auto p-4">
+      <Card className="mb-4">
+        <CardHeader>
+          <CardTitle>Breakout Strategy</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-4">
+              <div>
+                <Label>API Status</Label>
+                <div className={`mt-1 p-2 rounded ${
+                  apiStatus === 'online' ? 'bg-green-100 text-green-800' :
+                  apiStatus === 'offline' ? 'bg-red-100 text-red-800' :
+                  'bg-yellow-100 text-yellow-800'
+                }`}>
+                  {apiStatus.toUpperCase()}
+                </div>
+              </div>
+              
+              <div>
+                <Label htmlFor="exchange">Exchange</Label>
+                <Select
+                  value={selectedExchange}
+                  onValueChange={handleExchangeChange}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select exchange" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {exchanges.map((exchange) => (
+                      <SelectItem key={exchange.code} value={exchange.code}>
+                        {exchange.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>Market Status</Label>
+                <div className="mt-1 p-2 rounded bg-gray-100">
+                  {marketStatus}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <Label>Current Position</Label>
+                <div className="mt-1 p-2 rounded bg-gray-100">
+                  {currentPosition}
+                </div>
+              </div>
+
+              <div>
+                <Label>Current Price</Label>
+                <div className="mt-1 p-2 rounded bg-gray-100">
+                  {currentPrice ?? 'N/A'}
+                </div>
+              </div>
+
+              <div>
+                <Label>Strategy Status</Label>
+                <div className="mt-1 p-2 rounded bg-gray-100">
+                  {isRunning ? 'Running' : 'Stopped'}
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center">
-            <div 
-              className={`w-3 h-3 mr-2 rounded-full ${
-                marketStatus === "OPEN" ? "bg-green-500" : "bg-slate-400"
-              }`}
-            ></div>
-            <span className="text-sm text-slate-600">
-              Market: {marketStatus}
-            </span>
-          </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Strategy Configuration Panel */}
@@ -503,6 +522,6 @@ export default function BreakoutStrategy() {
           </table>
         </div>
       </div>
-    </>
+    </div>
   );
 } 

@@ -6,8 +6,20 @@ export const meta: MetaFunction = () => {
   return [{ title: "Historical Data | Admin Dashboard" }];
 };
 
-// API server URL - hardcoded for client-side use
-const API_URL = 'http://localhost:3001';
+// API server URL - will be updated client-side
+let API_URL = 'http://localhost:3001';
+
+interface Symbol {
+  instrument_token: number;
+  tradingsymbol: string;
+  name: string;
+  exchange: string;
+  expiry?: string;
+  strike?: number;
+  lot_size?: number;
+  instrument_type?: string;
+  segment?: string;
+}
 
 interface HistoricalData {
   date: string;
@@ -34,21 +46,20 @@ export default function HistoricalData() {
   // API status
   const [apiStatus, setApiStatus] = useState("checking");
   
-  // Check API status on mount
+  // Symbol search state - tracks the current search input, results, and selection
+  const [searchTerm, setSearchTerm] = useState('');
+  const [symbols, setSymbols] = useState<Symbol[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [selectedSymbol, setSelectedSymbol] = useState<Symbol | null>(null);
+  
+  // Set API URL based on environment but only in the browser
   useEffect(() => {
-    const checkApiStatus = async () => {
-      try {
-        const response = await fetch(`${API_URL}/`);
-        if (response.ok) {
-          setApiStatus("online");
-        } else {
-          setApiStatus("offline");
-        }
-      } catch (error) {
-        setApiStatus("offline");
-      }
-    };
-    
+    // Set API URL based on window.location (client-side only)
+    API_URL = window.location.hostname === "localhost" 
+      ? "http://localhost:3001"
+      : "https://your-production-api.com"; // Update with your production API URL
+      
+    // Check API status on mount
     checkApiStatus();
   }, []);
   
@@ -67,6 +78,73 @@ export default function HistoricalData() {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  };
+  
+  // Symbol search function - fetches matching symbols from the API
+  const searchSymbols = async (query: string) => {
+    if (!query.trim()) {
+      setSymbols([]);
+      return;
+    }
+    
+    setIsSearching(true);
+    try {
+      // Call the /symbols endpoint with search parameter
+      const response = await fetch(`${API_URL}/symbols?search=${encodeURIComponent(query)}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch symbols: ${response.status} ${response.statusText}`);
+      }
+      const data = await response.json();
+      setSymbols(data);
+    } catch (error) {
+      console.error('Error searching symbols:', error);
+      setError('Failed to search symbols. Please try again.');
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Debounced search - waits 300ms after typing stops before searching
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchTerm) {
+        searchSymbols(searchTerm);
+      }
+    }, 300);
+    
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Select symbol handler - updates the instrument token when a symbol is selected
+  const handleSelectSymbol = (symbol: Symbol) => {
+    setSelectedSymbol(symbol);
+    setInstrumentToken(symbol.instrument_token);
+    setSearchTerm('');
+    setSymbols([]);
+  };
+  
+  // Check API status and load default symbol
+  const checkApiStatus = async () => {
+    try {
+      const response = await fetch(`${API_URL}/`);
+      if (response.ok) {
+        setApiStatus("online");
+        // Load Nifty 50 by default
+        try {
+          const symbolResponse = await fetch(`${API_URL}/symbols/256265`);
+          if (symbolResponse.ok) {
+            const symbol = await symbolResponse.json();
+            setSelectedSymbol(symbol);
+          }
+        } catch (e) {
+          console.error("Error fetching default symbol:", e);
+        }
+      } else {
+        setApiStatus("offline");
+      }
+    } catch (error) {
+      setApiStatus("offline");
+    }
   };
   
   // Fetch historical data
@@ -116,31 +194,88 @@ export default function HistoricalData() {
       const data: HistoricalData[] = [];
       let currentDate = new Date(fromDateObj);
       
-      while (currentDate <= toDateObj) {
-        // Skip weekends
-        if (currentDate.getDay() !== 0 && currentDate.getDay() !== 6) {
-          const basePrice = 22000 + Math.floor(Math.random() * 2000) - 1000;
+      // For day-based intervals, generate one candle per day
+      if (interval === 'day') {
+        while (currentDate <= toDateObj) {
+          // Skip weekends
+          if (currentDate.getDay() !== 0 && currentDate.getDay() !== 6) {
+            const basePrice = 22000 + Math.floor(Math.random() * 2000) - 1000;
+            
+            const openPrice = basePrice;
+            const high = openPrice + Math.floor(Math.random() * 150) + 50;
+            const low = openPrice - Math.floor(Math.random() * 150) - 50;
+            const close = openPrice + Math.floor(Math.random() * 200) - 100;
+            const volume = Math.floor(Math.random() * 9000000) + 1000000;
+            
+            data.push({
+              date: currentDate.toISOString().split('T')[0],
+              timestamp: currentDate.toISOString().split('T')[0],
+              open: openPrice,
+              high,
+              low,
+              close,
+              volume
+            });
+          }
           
-          // For simplicity, just generate daily data
-          const openPrice = basePrice;
-          const high = openPrice + Math.floor(Math.random() * 150) + 50;
-          const low = openPrice - Math.floor(Math.random() * 150) - 50;
-          const close = openPrice + Math.floor(Math.random() * 200) - 100;
-          const volume = Math.floor(Math.random() * 9000000) + 1000000;
-          
-          data.push({
-            date: currentDate.toISOString().split('T')[0],
-            timestamp: currentDate.toISOString().split('T')[0],
-            open: openPrice,
-            high,
-            low,
-            close,
-            volume
-          });
+          // Move to next day
+          currentDate.setDate(currentDate.getDate() + 1);
         }
+      } else {
+        // For intraday data, generate candles based on interval
+        // Get minutes from interval string
+        const minutesMap: Record<string, number> = {
+          'minute': 1,
+          '3minute': 3,
+          '5minute': 5,
+          '10minute': 10,
+          '15minute': 15,
+          '30minute': 30,
+          '60minute': 60
+        };
+        const minutesPerCandle = minutesMap[interval] || 1;
         
-        // Move to next day
-        currentDate.setDate(currentDate.getDate() + 1);
+        // Generate data for each day
+        while (currentDate <= toDateObj) {
+          // Skip weekends
+          if (currentDate.getDay() !== 0 && currentDate.getDay() !== 6) {
+            const basePrice = 22000 + Math.floor(Math.random() * 2000) - 1000;
+            
+            // Trading hours 9:15 AM to 3:30 PM (375 minutes)
+            const marketOpen = new Date(currentDate);
+            marketOpen.setHours(9, 15, 0, 0);
+            
+            const marketClose = new Date(currentDate);
+            marketClose.setHours(15, 30, 0, 0);
+            
+            let currentTime = new Date(marketOpen);
+            let prevClose = basePrice;
+            
+            while (currentTime < marketClose) {
+              const openPrice = prevClose;
+              const high = openPrice + Math.floor(Math.random() * 20) + 5;
+              const low = openPrice - Math.floor(Math.random() * 20) - 5;
+              const close = openPrice + Math.floor(Math.random() * 30) - 15;
+              const volume = Math.floor(Math.random() * 100000) + 10000;
+              
+              data.push({
+                date: currentDate.toISOString().split('T')[0],
+                timestamp: currentTime.toISOString().replace('Z', ''),
+                open: openPrice,
+                high,
+                low,
+                close,
+                volume
+              });
+              
+              prevClose = close;
+              currentTime = new Date(currentTime.getTime() + minutesPerCandle * 60000);
+            }
+          }
+          
+          // Move to next day
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
       }
       
       setHistoricalData(data);
@@ -190,20 +325,54 @@ export default function HistoricalData() {
         <div className="p-6 bg-white rounded-xl shadow-md">
           <h2 className="mb-4 text-lg font-medium text-slate-900">Data Parameters</h2>
           
+          {/* Symbol Search */}
           <div className="mb-4">
-            <label htmlFor="instrumentToken" className="block mb-1 text-sm font-medium text-slate-700">
-              Instrument Token
+            <label htmlFor="symbol" className="block mb-1 text-sm font-medium text-slate-700">
+              Instrument / Symbol
             </label>
-            <input
-              type="number"
-              id="instrumentToken"
-              value={instrumentToken}
-              onChange={(e) => setInstrumentToken(Number(e.target.value))}
-              className="block w-full px-3 py-2 border rounded-md border-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
-            />
-            <p className="mt-1 text-xs text-slate-500">
-              Default: 256265 (Nifty)
-            </p>
+            <div className="relative">
+              <input
+                type="text"
+                id="symbol"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search by symbol or name"
+                className="block w-full px-3 py-2 border rounded-md border-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
+              />
+              {isSearching && (
+                <div className="absolute right-2 top-2">
+                  <svg className="w-5 h-5 text-slate-400 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                </div>
+              )}
+              {symbols.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white rounded-md shadow-lg border border-slate-300 max-h-60 overflow-y-auto">
+                  {symbols.map((symbol) => (
+                    <div
+                      key={symbol.instrument_token}
+                      className="px-4 py-2 cursor-pointer hover:bg-slate-100"
+                      onClick={() => handleSelectSymbol(symbol)}
+                    >
+                      <div className="font-medium">{symbol.tradingsymbol}</div>
+                      <div className="text-xs text-slate-500">
+                        {symbol.exchange} • {symbol.instrument_type || "Index"} • Token: {symbol.instrument_token}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            {selectedSymbol && (
+              <div className="mt-2 p-2 bg-slate-50 rounded text-sm">
+                <div className="font-medium">{selectedSymbol.tradingsymbol}</div>
+                <div className="text-xs text-slate-500">
+                  Token: {selectedSymbol.instrument_token} • {selectedSymbol.exchange}
+                  {selectedSymbol.lot_size && ` • Lot Size: ${selectedSymbol.lot_size}`}
+                </div>
+              </div>
+            )}
           </div>
           
           <div className="mb-4">
@@ -259,7 +428,7 @@ export default function HistoricalData() {
             <Button 
               type="button" 
               onClick={fetchHistoricalData}
-              disabled={isLoading || !fromDate || !toDate}
+              disabled={isLoading || !fromDate || !toDate || !selectedSymbol}
               className="w-full"
             >
               {isLoading ? "Fetching..." : "Fetch Data"}

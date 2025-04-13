@@ -29,7 +29,7 @@ export default function Sidebar({ navigationItems }: SidebarProps) {
               alt="Logo" 
               className="w-8 h-8 mr-2"
             />
-            REMIX ADMIN
+            ALGO
           </Link>
         </div>
         
