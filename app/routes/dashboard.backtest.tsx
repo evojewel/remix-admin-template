@@ -121,14 +121,53 @@ export default function BacktestStrategy() {
     setStartDate(`${year}-${month}-${day}`);
   }, []);
   
-  // Run backtest with mock fallback
+  // Symbol search function
+  const searchSymbols = async (query: string) => {
+    if (!query.trim()) {
+      setSymbols([]);
+      return;
+    }
+    
+    setIsSearching(true);
+    try {
+      const response = await fetch(`${API_URL}/symbols?search=${encodeURIComponent(query)}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch symbols: ${response.status} ${response.statusText}`);
+      }
+      const data = await response.json();
+      setSymbols(data);
+    } catch (error) {
+      console.error('Error searching symbols:', error);
+      setError('Failed to search symbols. Please try again.');
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchTerm) {
+        searchSymbols(searchTerm);
+      }
+    }, 300);
+    
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Select symbol and update instrument token
+  const handleSelectSymbol = (symbol: Symbol) => {
+    setSelectedSymbol(symbol);
+    setInstrument(symbol.instrument_token);
+    setSearchTerm('');
+    setSymbols([]);
+  };
+  
+  // Run backtest with API call
   const runBacktest = async () => {
     setIsLoading(true);
     setError(null);
 
-    // Always use client-side mock data generation
-    // Comment out the API call for now, since it's not working reliably
-    /*
     try {
       const response = await fetch(`${API_URL}/backtest`, {
         method: 'POST',
@@ -162,27 +201,6 @@ export default function BacktestStrategy() {
       setError("Failed to run backtest. Using mock data instead.");
       // Try to load mock data as fallback
       await loadMockBacktestData();
-    } finally {
-      setIsLoading(false);
-    }
-    */
-
-    try {
-      // Generate mock data directly in the frontend
-      const mockData = generateMockBacktestData(
-        startDate,
-        endDate || startDate,
-        xTime,
-        yTime,
-        entryTime,
-        stopLoss,
-        target
-      );
-      
-      setBacktestResults(mockData);
-    } catch (error) {
-      console.error("Error generating mock data:", error);
-      setError("Failed to generate backtest data");
     } finally {
       setIsLoading(false);
     }
@@ -326,52 +344,22 @@ export default function BacktestStrategy() {
     return new Date(dateString).toLocaleDateString();
   };
   
-  // Symbol search function
-  const searchSymbols = async (query: string) => {
-    if (!query.trim()) {
-      setSymbols([]);
-      return;
-    }
-    
-    setIsSearching(true);
-    try {
-      const response = await fetch(`${API_URL}/symbols?search=${encodeURIComponent(query)}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch symbols');
-      }
-      const data = await response.json();
-      setSymbols(data);
-    } catch (error) {
-      console.error('Error searching symbols:', error);
-      setError('Failed to search symbols. Please try again.');
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
-  // Debounced search
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      searchSymbols(searchTerm);
-    }, 300);
-    
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
-
-  // Select symbol and update instrument token
-  const handleSelectSymbol = (symbol: Symbol) => {
-    setSelectedSymbol(symbol);
-    setInstrument(symbol.instrument_token);
-    setSearchTerm('');
-    setSymbols([]);
-  };
-  
   // Check API status on mount
   const checkApiStatus = async () => {
     try {
       const response = await fetch(`${API_URL}/`);
       if (response.ok) {
         setApiStatus("online");
+        // Load Nifty 50 by default
+        try {
+          const symbolResponse = await fetch(`${API_URL}/symbols/256265`);
+          if (symbolResponse.ok) {
+            const symbol = await symbolResponse.json();
+            setSelectedSymbol(symbol);
+          }
+        } catch (e) {
+          console.error("Error fetching default symbol:", e);
+        }
       } else {
         setApiStatus("offline");
       }
