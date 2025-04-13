@@ -1,7 +1,7 @@
 import type { MetaFunction } from "@remix-run/node";
 import { Form, Link, useNavigation, useSearchParams } from "@remix-run/react";
 
-import Button from "~/components/Button";
+import Button from "~/components/ui/button";
 import TextField from "~/components/TextField";
 
 export const meta: MetaFunction = () => {

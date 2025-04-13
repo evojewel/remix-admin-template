@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import type { MetaFunction } from "@remix-run/node";
 import { Form, useNavigation } from "@remix-run/react";
-import Button from "~/components/Button";
+import Button from "~/components/ui/button";
 
 export const meta: MetaFunction = () => {
   return [{ title: "Kite Connect Token | Admin Dashboard" }];

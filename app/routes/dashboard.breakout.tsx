@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import type { MetaFunction } from "@remix-run/node";
 import { useNavigation } from "@remix-run/react";
-import Button from "~/components/Button";
+import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Label } from "~/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
@@ -63,6 +63,9 @@ export default function BreakoutStrategy() {
   const [exchanges, setExchanges] = useState<Array<{code: string, name: string}>>([]);
   
   const { toast } = useToast();
+  
+  // Add loading state
+  const [isLoading, setIsLoading] = useState(false);
   
   // Separate WebSocket setup effect
   useEffect(() => {
@@ -140,6 +143,9 @@ export default function BreakoutStrategy() {
   // Separate initial data fetch effect
   useEffect(() => {
     const fetchInitialData = async () => {
+      if (isLoading || apiStatus !== 'online') return;
+      
+      setIsLoading(true);
       try {
         // Fetch status
         const statusResponse = await fetch(`${API_URL}/status`);
@@ -169,12 +175,17 @@ export default function BreakoutStrategy() {
         
       } catch (error) {
         console.error("Error fetching initial data:", error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch initial data",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    if (apiStatus === 'online') {
-      fetchInitialData();
-    }
+    fetchInitialData();
   }, [apiStatus]); // Only run when apiStatus changes
 
   // Add exchange selection to the form
@@ -199,6 +210,72 @@ export default function BreakoutStrategy() {
       toast({
         title: "Error",
         description: "Failed to update exchange",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  // Add back the missing functions
+  const applyParameters = async () => {
+    try {
+      const response = await fetch(`${API_URL}/config`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          x_time: xTime,
+          y_time: yTime,
+          entry_time: entryTime,
+          stop_loss: stopLoss,
+          target: target,
+          lot_size: lotSize,
+          exchange: selectedExchange, // Add exchange to config
+        }),
+      });
+      
+      if (response.ok) {
+        // Config will be updated via WebSocket
+        toast({
+          title: "Success",
+          description: "Strategy parameters updated successfully",
+        });
+      }
+    } catch (error) {
+      console.error("Error updating strategy parameters:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update strategy parameters",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const toggleTrading = async () => {
+    try {
+      const response = await fetch(`${API_URL}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          is_running: !isRunning,
+          exchange: selectedExchange, // Add exchange to status update
+        }),
+      });
+      
+      if (response.ok) {
+        // Status will be updated via WebSocket
+        toast({
+          title: "Success",
+          description: `Trading ${!isRunning ? 'started' : 'stopped'} successfully`,
+        });
+      }
+    } catch (error) {
+      console.error("Error toggling trading status:", error);
+      toast({
+        title: "Error",
+        description: "Failed to toggle trading status",
         variant: "destructive",
       });
     }

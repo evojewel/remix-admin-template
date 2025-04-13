@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
 import type { MetaFunction } from "@remix-run/node";
 import { useNavigation } from "@remix-run/react";
-import Button from "~/components/Button";
+import Button from "~/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
+import { Label } from "~/components/ui/label";
 
 export const meta: MetaFunction = () => {
   return [{ title: "Backtest Nifty Strategy | Admin Dashboard" }];
@@ -100,6 +102,15 @@ export default function BacktestStrategy() {
   const [isSearching, setIsSearching] = useState(false);
   const [selectedSymbol, setSelectedSymbol] = useState<Symbol | null>(null);
   
+  // Add exchange state
+  const [selectedExchange, setSelectedExchange] = useState("NFO");
+  const [exchanges, setExchanges] = useState<Array<{code: string, name: string}>>([
+    { code: "NFO", name: "NSE Futures & Options" },
+    { code: "NSE", name: "NSE Cash" },
+    { code: "BFO", name: "BSE Futures & Options" },
+    { code: "BSE", name: "BSE Cash" },
+  ]);
+  
   // Set API URL based on environment but only in the browser
   useEffect(() => {
     // Set API URL based on window.location (client-side only)
@@ -121,7 +132,7 @@ export default function BacktestStrategy() {
     setStartDate(`${year}-${month}-${day}`);
   }, []);
   
-  // Symbol search function
+  // Update symbol search to include exchange
   const searchSymbols = async (query: string) => {
     if (!query.trim()) {
       setSymbols([]);
@@ -130,7 +141,7 @@ export default function BacktestStrategy() {
     
     setIsSearching(true);
     try {
-      const response = await fetch(`${API_URL}/symbols?search=${encodeURIComponent(query)}`);
+      const response = await fetch(`${API_URL}/symbols?search=${encodeURIComponent(query)}&exchange=${selectedExchange}`);
       if (!response.ok) {
         throw new Error(`Failed to fetch symbols: ${response.status} ${response.statusText}`);
       }
@@ -161,6 +172,13 @@ export default function BacktestStrategy() {
     setInstrument(symbol.instrument_token);
     setSearchTerm('');
     setSymbols([]);
+  };
+  
+  // Add exchange selection handler
+  const handleExchangeChange = (value: string) => {
+    setSelectedExchange(value);
+    setSymbols([]); // Clear symbols when exchange changes
+    setSelectedSymbol(null); // Clear selected symbol
   };
   
   // Run backtest with API call
@@ -369,26 +387,27 @@ export default function BacktestStrategy() {
   };
   
   return (
-    <>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold text-slate-900 lg:text-3xl">
-          Backtest Strategy
-        </h1>
-        <div className="flex items-center">
-          <div 
-            className={`w-3 h-3 mr-2 rounded-full ${
-              apiStatus === "checking" ? "bg-yellow-500" :
-              apiStatus === "online" ? "bg-green-500" : "bg-red-500"
-            }`}
-          ></div>
-          <span className="text-sm text-slate-600">
-            API Status: {apiStatus === "checking" ? "Checking..." : 
-                         apiStatus === "online" ? "Online" : "Offline"}
-          </span>
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">Backtest Strategy</h1>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        {/* Add exchange selection */}
+        <div className="space-y-2">
+          <Label htmlFor="exchange">Exchange</Label>
+          <Select value={selectedExchange} onValueChange={handleExchangeChange}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select exchange" />
+            </SelectTrigger>
+            <SelectContent>
+              {exchanges.map((exchange) => (
+                <SelectItem key={exchange.code} value={exchange.code}>
+                  {exchange.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Backtest Parameters Form */}
         <div className="p-6 bg-white rounded-xl shadow-md">
           <h2 className="mb-4 text-lg font-medium text-slate-900">Backtest Parameters</h2>
@@ -740,6 +759,6 @@ export default function BacktestStrategy() {
           )}
         </div>
       </div>
-    </>
+    </div>
   );
 } 

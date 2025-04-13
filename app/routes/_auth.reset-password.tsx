@@ -1,8 +1,8 @@
 import type { MetaFunction } from "@remix-run/node";
 import { Form } from "@remix-run/react";
 
-import Button from "~/components/Button";
-import TextField from "~/components/TextField";
+import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
 
 export const meta: MetaFunction = () => {
   return [
@@ -19,7 +19,7 @@ export default function ResetPassword() {
         Forgot your password?
       </h1>
       <Form method="POST" className="w-full space-y-4 lg:space-y-6">
-        <TextField
+        <Input
           id="email"
           name="email"
           label="Email address"

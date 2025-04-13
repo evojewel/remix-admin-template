@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import type { MetaFunction } from "@remix-run/node";
-import Button from "~/components/Button";
+import { Button } from "~/components/ui/button";
 
 export const meta: MetaFunction = () => {
   return [{ title: "Historical Data | Admin Dashboard" }];

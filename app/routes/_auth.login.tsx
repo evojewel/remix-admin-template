@@ -6,132 +6,87 @@ import type {
 import { redirect } from "@remix-run/node";
 import { Form, Link, useActionData, useNavigation } from "@remix-run/react";
 
-import { commitSession, getSession } from "~/session.server";
+import { createUserSession, getSession } from "../session.server";
 
-import Button from "~/components/Button";
+import Button from "~/components/ui/button";
 import TextField from "~/components/TextField";
-import { getSupabaseClient } from "~/utils/getSupabaseClient";
 
 export const meta: MetaFunction = () => {
   return [
     {
-      title: "Login | Remix Dashboard",
+      title: "Login | Kite Admin",
     },
   ];
 };
 
 export async function action({ request }: ActionFunctionArgs) {
   const formData = await request.formData();
-  const email = formData.get("email");
-  const password = formData.get("password");
+  const email = formData.get("email") as string;
+  const password = formData.get("password") as string;
 
-  if (typeof email !== "string" || typeof password !== "string") {
-    return Response.json(
-      { error: "Email and password must be provided." },
-      { status: 400 }
-    );
+  // TODO: Implement proper authentication
+  if (email === "admin@example.com" && password === "password") {
+    return createUserSession({
+      request,
+      userId: "1",
+      redirectTo: "/dashboard",
+    });
   }
 
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-
-  if (error) {
-    return Response.json({ error: error.message }, { status: 400 });
-  }
-
-  const session = await getSession(request.headers.get("Cookie"));
-  session.set("__session", data.session.access_token);
-
-  return redirect("/dashboard", {
-    headers: {
-      "Set-Cookie": await commitSession(session),
-    },
-  });
+  return { error: "Invalid email or password" };
 }
 
 export async function loader({ request }: LoaderFunctionArgs) {
-  const session = await getSession(request.headers.get("Cookie"));
-  const token = session.get("__session");
-
-  if (token) {
+  const session = await getSession(request);
+  if (session.has("userId")) {
     return redirect("/dashboard");
   }
-
-  return Response.json({});
+  return null;
 }
 
 export default function LogIn() {
-  const actionData = useActionData<{ error?: string }>();
+  const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
-
   const isSubmitting = navigation.state === "submitting";
 
   return (
-    <div className="w-full max-w-2xl px-8 py-10 space-y-8 bg-white shadow-md rounded-xl lg:space-y-10 lg:px-10 lg:py-12 ">
-      <div className="space-y-3">
-        <h1 className="text-2xl font-semibold text-slate-900 sm:text-3xl lg:text-4xl">
-          Log In to Remix Dashboard
-        </h1>
-        <div className="flex gap-3 p-3 rounded-md bg-cyan-50">
-          <div className="flex items-center justify-center w-5 h-5 font-serif italic text-white rounded-full bg-cyan-500">
-            i
-          </div>
-          <div className="text-xs">
-            <p>
-              Email: <span className="font-medium">demo@example.com</span>
-            </p>
-            <p>
-              Password: <span className="font-medium">demo123</span>
-            </p>
-          </div>
+    <div className="flex min-h-screen flex-col justify-center py-12 sm:px-6 lg:px-8">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">
+          Sign in to your account
+        </h2>
+      </div>
+
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-white px-4 py-8 shadow sm:rounded-lg sm:px-10">
+          <Form method="post" className="space-y-6">
+            <TextField
+              id="email"
+              name="email"
+              type="email"
+              label="Email address"
+              required
+            />
+            <TextField
+              id="password"
+              name="password"
+              type="password"
+              label="Password"
+              required
+            />
+
+            {actionData?.error && (
+              <div className="text-sm text-red-600">{actionData.error}</div>
+            )}
+
+            <div>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Signing in..." : "Sign in"}
+              </Button>
+            </div>
+          </Form>
         </div>
       </div>
-      <Form method="POST">
-        {actionData?.error && (
-          <p className="p-3 mb-4 text-sm rounded-md bg-rose-50 text-rose-700">
-            {actionData.error}
-          </p>
-        )}
-        <fieldset
-          className="w-full space-y-4 lg:space-y-6 disabled:opacity-70"
-          disabled={isSubmitting}
-        >
-          <TextField
-            id="email"
-            name="email"
-            label="Email address"
-            required
-            type="email"
-            placeholder="Email address"
-          />
-          <TextField
-            id="password"
-            name="password"
-            label="Password"
-            required
-            type="password"
-            placeholder="password"
-          />
-          <Link
-            to="/reset-password"
-            className="block text-sm tracking-wide underline text-cyan-600"
-          >
-            Forgot password?
-          </Link>
-          <Button type="submit" className="w-full" loading={isSubmitting}>
-            Login
-          </Button>
-          <p className="text-sm text-center">
-            New on Remix Dashboard?{" "}
-            <Link className="underline text-cyan-600" to="/signup">
-              Create an account
-            </Link>
-          </p>
-        </fieldset>
-      </Form>
     </div>
   );
 }
