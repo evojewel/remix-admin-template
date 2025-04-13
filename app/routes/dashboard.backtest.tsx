@@ -7,8 +7,22 @@ export const meta: MetaFunction = () => {
   return [{ title: "Backtest Nifty Strategy | Admin Dashboard" }];
 };
 
-// API server URL - hardcoded for client-side use
-const API_URL = 'http://localhost:3001';
+// Define API URL based on environment
+const API_URL = window.location.hostname === "localhost" 
+  ? "http://localhost:3001"
+  : "https://your-production-api.com"; // Update with your production API URL
+
+interface Symbol {
+  instrument_token: number;
+  tradingsymbol: string;
+  name: string;
+  exchange: string;
+  expiry?: string;
+  strike?: number;
+  lot_size?: number;
+  instrument_type?: string;
+  segment?: string;
+}
 
 interface BacktestSummary {
   total_trades: number;
@@ -36,8 +50,13 @@ interface BacktestParameters {
 
 interface BacktestResult {
   date: string;
+  open?: number;
   high: number;
   low: number;
+  close?: number;
+  volume?: number;
+  day_change?: number;
+  day_change_percent?: number;
   entry_price: number;
   exit_price: number;
   position: string;
@@ -76,6 +95,12 @@ export default function BacktestStrategy() {
   
   // API status
   const [apiStatus, setApiStatus] = useState("checking");
+  
+  // Symbol search state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [symbols, setSymbols] = useState<Symbol[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [selectedSymbol, setSelectedSymbol] = useState<Symbol | null>(null);
   
   // Check API status on mount
   useEffect(() => {
@@ -302,6 +327,46 @@ export default function BacktestStrategy() {
     return new Date(dateString).toLocaleDateString();
   };
   
+  // Symbol search function
+  const searchSymbols = async (query: string) => {
+    if (!query.trim()) {
+      setSymbols([]);
+      return;
+    }
+    
+    setIsSearching(true);
+    try {
+      const response = await fetch(`${API_URL}/symbols?search=${encodeURIComponent(query)}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch symbols');
+      }
+      const data = await response.json();
+      setSymbols(data);
+    } catch (error) {
+      console.error('Error searching symbols:', error);
+      setError('Failed to search symbols. Please try again.');
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      searchSymbols(searchTerm);
+    }, 300);
+    
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Select symbol and update instrument token
+  const handleSelectSymbol = (symbol: Symbol) => {
+    setSelectedSymbol(symbol);
+    setInstrument(symbol.instrument_token);
+    setSearchTerm('');
+    setSymbols([]);
+  };
+  
   return (
     <>
       <div className="flex items-center justify-between mb-6">
@@ -326,6 +391,56 @@ export default function BacktestStrategy() {
         {/* Backtest Parameters Form */}
         <div className="p-6 bg-white rounded-xl shadow-md">
           <h2 className="mb-4 text-lg font-medium text-slate-900">Backtest Parameters</h2>
+          
+          {/* Symbol Search */}
+          <div className="mb-4">
+            <label htmlFor="symbol" className="block mb-1 text-sm font-medium text-slate-700">
+              Instrument / Symbol
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                id="symbol"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search by symbol or name"
+                className="block w-full px-3 py-2 border rounded-md border-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
+              />
+              {isSearching && (
+                <div className="absolute right-2 top-2">
+                  <svg className="w-5 h-5 text-slate-400 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                </div>
+              )}
+              {symbols.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white rounded-md shadow-lg border border-slate-300 max-h-60 overflow-y-auto">
+                  {symbols.map((symbol) => (
+                    <div
+                      key={symbol.instrument_token}
+                      className="px-4 py-2 cursor-pointer hover:bg-slate-100"
+                      onClick={() => handleSelectSymbol(symbol)}
+                    >
+                      <div className="font-medium">{symbol.tradingsymbol}</div>
+                      <div className="text-xs text-slate-500">
+                        {symbol.exchange} • {symbol.instrument_type || "Index"} • Token: {symbol.instrument_token}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            {selectedSymbol && (
+              <div className="mt-2 p-2 bg-slate-50 rounded text-sm">
+                <div className="font-medium">{selectedSymbol.tradingsymbol}</div>
+                <div className="text-xs text-slate-500">
+                  Token: {selectedSymbol.instrument_token} • {selectedSymbol.exchange}
+                  {selectedSymbol.lot_size && ` • Lot Size: ${selectedSymbol.lot_size}`}
+                </div>
+              </div>
+            )}
+          </div>
           
           <div className="mb-4">
             <label htmlFor="startDate" className="block mb-1 text-sm font-medium text-slate-700">
@@ -532,37 +647,87 @@ export default function BacktestStrategy() {
                 </div>
               </div>
               
-              <div>
-                <h3 className="mb-2 text-md font-medium text-slate-800">Trade Details</h3>
+              <div className="mt-6">
+                <h3 className="mb-2 text-md font-medium text-slate-800">Detailed Results</h3>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="border-b border-slate-200">
-                        <th className="px-2 py-2 text-xs font-medium text-slate-600">Date</th>
-                        <th className="px-2 py-2 text-xs font-medium text-slate-600">Position</th>
-                        <th className="px-2 py-2 text-xs font-medium text-slate-600">Entry</th>
-                        <th className="px-2 py-2 text-xs font-medium text-slate-600">Exit</th>
-                        <th className="px-2 py-2 text-xs font-medium text-slate-600 text-right">P&L</th>
+                  <table className="w-full min-w-full divide-y divide-slate-200">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        <th className="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Date</th>
+                        <th className="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Position</th>
+                        <th className="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Entry Price</th>
+                        <th className="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Exit Price</th>
+                        <th className="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">P/L</th>
+                        <th className="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Day Change</th>
+                        <th className="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">SL Hit</th>
+                        <th className="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Target Hit</th>
                       </tr>
                     </thead>
-                    <tbody>
-                      {backtestResults.results.map((trade, index) => (
-                        <tr key={index} className="border-b border-slate-100">
-                          <td className="px-2 py-2 text-xs text-slate-800">{formatDate(trade.date)}</td>
-                          <td className="px-2 py-2 text-xs">
-                            <span className={`px-2 py-1 text-xs rounded-full ${
-                              trade.position === "LONG" ? "bg-green-100 text-green-800" : 
-                              "bg-red-100 text-red-800"
+                    <tbody className="bg-white divide-y divide-slate-200">
+                      {backtestResults.results.map((result, index) => (
+                        <tr key={index} className="hover:bg-slate-50">
+                          <td className="px-3 py-2 whitespace-nowrap text-sm text-slate-900">{formatDate(result.date)}</td>
+                          <td className="px-3 py-2 whitespace-nowrap text-sm">
+                            <span className={`inline-flex rounded-full px-2 text-xs font-semibold ${
+                              result.position === "LONG" 
+                                ? "bg-cyan-100 text-cyan-800" 
+                                : "bg-amber-100 text-amber-800"
                             }`}>
-                              {trade.position}
+                              {result.position}
                             </span>
                           </td>
-                          <td className="px-2 py-2 text-xs text-slate-800">{trade.entry_price}</td>
-                          <td className="px-2 py-2 text-xs text-slate-800">{trade.exit_price}</td>
-                          <td className={`px-2 py-2 text-xs font-medium text-right ${
-                            trade.profit_loss >= 0 ? "text-green-600" : "text-red-600"
-                          }`}>
-                            {trade.profit_loss.toFixed(2)}
+                          <td className="px-3 py-2 whitespace-nowrap text-sm text-slate-900">{result.entry_price.toFixed(2)}</td>
+                          <td className="px-3 py-2 whitespace-nowrap text-sm text-slate-900">{result.exit_price.toFixed(2)}</td>
+                          <td className="px-3 py-2 whitespace-nowrap text-sm font-medium">
+                            <span className={`${
+                              result.profit_loss > 0 
+                                ? "text-green-600" 
+                                : result.profit_loss < 0 
+                                  ? "text-red-600" 
+                                  : "text-slate-600"
+                            }`}>
+                              {result.profit_loss.toFixed(2)}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 whitespace-nowrap text-sm">
+                            {result.day_change !== undefined && (
+                              <div>
+                                <span className={`${
+                                  result.day_change > 0 
+                                    ? "text-green-600" 
+                                    : result.day_change < 0 
+                                      ? "text-red-600" 
+                                      : "text-slate-600"
+                                }`}>
+                                  {result.day_change.toFixed(2)}
+                                </span>
+                                {result.day_change_percent !== undefined && (
+                                  <span className={`ml-1 text-xs ${
+                                    result.day_change > 0 
+                                      ? "text-green-600" 
+                                      : result.day_change < 0 
+                                        ? "text-red-600" 
+                                        : "text-slate-600"
+                                  }`}>
+                                    ({result.day_change_percent.toFixed(2)}%)
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-3 py-2 whitespace-nowrap text-sm">
+                            {result.stop_loss_hit ? (
+                              <span className="inline-flex rounded-full bg-red-100 text-red-800 px-2 text-xs font-semibold">Yes</span>
+                            ) : (
+                              <span className="inline-flex rounded-full bg-slate-100 text-slate-800 px-2 text-xs font-semibold">No</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2 whitespace-nowrap text-sm">
+                            {result.target_hit ? (
+                              <span className="inline-flex rounded-full bg-green-100 text-green-800 px-2 text-xs font-semibold">Yes</span>
+                            ) : (
+                              <span className="inline-flex rounded-full bg-slate-100 text-slate-800 px-2 text-xs font-semibold">No</span>
+                            )}
                           </td>
                         </tr>
                       ))}

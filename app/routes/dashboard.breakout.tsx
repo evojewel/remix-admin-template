@@ -35,31 +35,46 @@ export default function BreakoutStrategy() {
   
   // API status
   const [apiStatus, setApiStatus] = useState("checking");
+  const [lastCheckTime, setLastCheckTime] = useState<Date | null>(null);
   
   // Fetch initial data and set up websocket
   useEffect(() => {
     // Check API status
     const checkApiStatus = async () => {
       try {
-        const response = await fetch(`${API_URL}/`);
+        const response = await fetch(`${API_URL}/`, {
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+        
         if (response.ok) {
           setApiStatus("online");
+          setLastCheckTime(new Date());
           // If API is online, fetch initial data
-          fetchInitialData();
+          await fetchInitialData();
           // Set up WebSocket connection
           setupWebSocket();
         } else {
           setApiStatus("offline");
+          console.error("API returned error status:", response.status);
         }
       } catch (error) {
         setApiStatus("offline");
+        console.error("Error checking API status:", error);
       }
     };
     
+    // Initial check
     checkApiStatus();
     
-    // Clean up WebSocket on unmount
+    // Set up periodic check every 30 seconds
+    const statusInterval = setInterval(checkApiStatus, 30000);
+    
+    // Clean up intervals and WebSocket on unmount
     return () => {
+      clearInterval(statusInterval);
       if (window.strategySocket) {
         window.strategySocket.close();
       }
