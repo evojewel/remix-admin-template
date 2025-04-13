@@ -38,7 +38,7 @@ export default function Sidebar({ navigationItems }: SidebarProps) {
           <nav className="flex-1 space-y-1">
             {navigationItems.map((item) => {
               const IconComponent = item.icon;
-              const isActive = pathname === item.to;
+              const isActive = pathname.startsWith(item.to);
               
               return (
                 <Link
