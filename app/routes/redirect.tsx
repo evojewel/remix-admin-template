@@ -23,7 +23,7 @@ export default function KiteRedirect() {
       
       try {
         // Send the request token to your API backend
-        const response = await fetch(`${process.env.API_BASE_URL || 'http://localhost:3001'}/api/token-generate`, {
+        const response = await fetch(`${process.env.API_BASE_URL || 'http://localhost:8000'}/api/token-generate`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

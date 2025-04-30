@@ -10,7 +10,11 @@ export const meta: MetaFunction = () => {
 };
 
 // Define API URL based on environment - but use useEffect for window access
-let API_URL = "http://localhost:3001"; // Default value during server-side rendering
+let API_URL = "http://localhost:8000"; // Default value during server-side rendering
+
+API_URL = process.env.API_BASE_URL
+  ? process.env.API_BASE_URL
+  : "http://localhost:8000";
 
 interface Symbol {
   instrument_token: number;
@@ -115,7 +119,7 @@ export default function BacktestStrategy() {
   useEffect(() => {
     // Set API URL based on window.location (client-side only)
     API_URL = window.location.hostname === "localhost" 
-      ? "http://localhost:3001"
+      ? "http://localhost:8000"
       : "https://your-production-api.com"; // Update with your production API URL
       
     // Check API status on mount

@@ -3,7 +3,12 @@
  */
 
 // Base API URL - will be determined at runtime
-let API_BASE_URL = 'http://localhost:3001';
+let API_BASE_URL = 'http://localhost:8000';
+
+// Use environment variable if available, otherwise use default
+API_BASE_URL = process.env.API_BASE_URL
+  ? process.env.API_BASE_URL
+  : 'http://localhost:8000';
 
 // Initialize the API URL based on the environment
 export function initApiClient() {

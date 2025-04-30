@@ -13,7 +13,11 @@ export const meta: MetaFunction = () => {
 };
 
 // Define API URL based on environment
-let API_URL = "http://localhost:3001";
+let API_URL = "http://localhost:8000";
+
+API_URL = process.env.API_BASE_URL
+  ? process.env.API_BASE_URL
+  : "http://localhost:8000";
 
 interface Symbol {
   instrument_token: number;

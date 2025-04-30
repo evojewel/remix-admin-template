@@ -6,7 +6,7 @@
  */
 
 async function checkApiConnection() {
-  const API_URL = 'http://localhost:3001';
+  const API_URL = 'http://localhost:8000';
   
   console.log('Checking API connection to:', API_URL);
   
