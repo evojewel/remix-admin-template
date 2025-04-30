@@ -14,9 +14,8 @@ export default function TokenGeneration() {
   const [apiStatus, setApiStatus] = useState<"checking" | "online" | "offline">("checking");
   
   useEffect(() => {
-    // Set the default redirect URL based on the current host
-    const host = window.location.origin;
-    setRedirectUri(`${host}/redirect`);
+    // Set the default redirect URL based on the API server
+    setRedirectUri(`${process.env.API_BASE_URL || 'http://localhost:8000'}/api/redirect`);
     
     // Check API status
     const checkApiStatus = async () => {
@@ -61,23 +60,6 @@ export default function TokenGeneration() {
       <div className="p-6 bg-white rounded-xl shadow-md">
         <div className="max-w-2xl mx-auto">
           <div className="mb-6">
-            <div className="p-4 text-sm border rounded-md bg-cyan-50 border-cyan-200">
-              <p className="font-medium text-cyan-800">
-                About the Authorization Process
-              </p>
-              <p className="mt-1 text-cyan-700">
-                This tool will help you generate a Kite Connect access token by following these steps:
-              </p>
-              <ol className="mt-2 ml-4 list-decimal text-cyan-700">
-                <li>You will be redirected to Zerodha's login page</li>
-                <li>After login, Zerodha will redirect back with a request token</li>
-                <li>We'll exchange the request token for an access token</li>
-                <li>The access token will be stored securely for trading operations</li>
-              </ol>
-            </div>
-          </div>
-          
-          <div className="mb-6">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-gray-700">API Status:</span>
               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -99,6 +81,23 @@ export default function TokenGeneration() {
               </div>
             )}
             
+            <div className="p-4 text-sm border rounded-md bg-cyan-50 border-cyan-200">
+              <p className="font-medium text-cyan-800">
+                About the Authorization Process
+              </p>
+              <p className="mt-1 text-cyan-700">
+                This tool will help you generate a Kite Connect access token by following these steps:
+              </p>
+              <ol className="mt-2 ml-4 list-decimal text-cyan-700">
+                <li>You will be redirected to Zerodha's login page</li>
+                <li>After login, Zerodha will redirect back with a request token</li>
+                <li>We'll exchange the request token for an access token</li>
+                <li>The access token will be stored securely for trading operations</li>
+              </ol>
+            </div>
+          </div>
+          
+          <div className="mb-6">
             <div className="mb-4">
               <label htmlFor="apiKey" className="block mb-1 text-sm font-medium text-slate-700">
                 API Key

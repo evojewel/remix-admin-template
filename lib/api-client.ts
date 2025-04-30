@@ -6,8 +6,8 @@
 let API_BASE_URL = 'http://localhost:8000';
 
 // Use environment variable if available, otherwise use default
-API_BASE_URL = process.env.API_BASE_URL
-  ? process.env.API_BASE_URL
+API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+  ? import.meta.env.VITE_API_BASE_URL
   : 'http://localhost:8000';
 
 // Initialize the API URL based on the environment
@@ -15,7 +15,7 @@ export function initApiClient() {
   if (typeof window !== 'undefined') {
     // Client-side, use the location to determine API URL
     API_BASE_URL = window.location.hostname === 'localhost'
-      ? 'http://localhost:3001'
+      ? 'http://localhost:8000'
       : 'https://your-production-api.com';
     console.log('API client initialized with URL:', API_BASE_URL);
   }
