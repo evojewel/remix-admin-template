@@ -14,8 +14,9 @@ export default function TokenGeneration() {
   const [apiStatus, setApiStatus] = useState<"checking" | "online" | "offline">("checking");
   
   useEffect(() => {
-    // Set the default redirect URL based on the API server
-    setRedirectUri(`${process.env.API_BASE_URL || 'http://localhost:8000'}/api/redirect`);
+    // Set the default redirect URL based on the current host
+    const host = window.location.origin;
+    setRedirectUri(`${host}/redirect`);
     
     // Check API status
     const checkApiStatus = async () => {
@@ -148,12 +149,12 @@ export default function TokenGeneration() {
               className={`inline-flex justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
                 apiStatus !== "online" ? "opacity-50 cursor-not-allowed" : ""
               }`}
-              onClick={(e) => {
-                if (apiStatus !== "online") {
-                  e.preventDefault();
-                  alert("Please ensure the API server is running before proceeding.");
-                }
-              }}
+              // onClick={(e) => {
+              //   if (apiStatus !== "online") {
+              //     e.preventDefault();
+              //     alert("Please ensure the API server is running before proceeding.");
+              //   }
+              // }}
             >
               Authorize
             </a>
