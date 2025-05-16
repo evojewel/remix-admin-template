@@ -15,7 +15,7 @@ import { Label } from "~/components/ui/label";
 export const meta: MetaFunction = () => {
   return [
     {
-      title: "Login | Kite Admin",
+      title: "Login | Algo Admin",
     },
   ];
 };

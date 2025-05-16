@@ -21,7 +21,7 @@ export default function TokenGeneration() {
     // Check API status
     const checkApiStatus = async () => {
       try {
-        const response = await fetch(`${process.env.API_BASE_URL || 'http://localhost:8000'}/api-status`);
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api-status`);
         if (response.ok) {
           const data = await response.json();
           setApiStatus(data.status);
@@ -166,7 +166,7 @@ export default function TokenGeneration() {
             {apiStatus === "online" && (
               <p className="mt-4">
                 <a 
-                  href={`${process.env.API_BASE_URL || 'http://localhost:8000'}`} 
+                  href={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}`} 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-cyan-600 underline hover:text-cyan-800"

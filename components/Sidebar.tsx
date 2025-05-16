@@ -21,7 +21,7 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
     <div className={`${isOpen ? 'translate-x-0' : '-translate-x-full'} fixed inset-y-0 left-0 z-30 w-64 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 flex h-full flex-col bg-gray-800`}>
       <div className="flex h-16 flex-shrink-0 items-center px-4">
         <Link to="/" className="text-xl font-bold">
-          Kite Admin
+          Algo Admin
         </Link>
       </div>
       <div className="flex flex-1 flex-col overflow-y-auto">

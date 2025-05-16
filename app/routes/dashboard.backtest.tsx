@@ -12,8 +12,8 @@ export const meta: MetaFunction = () => {
 // Define API URL based on environment - but use useEffect for window access
 let API_URL = "http://localhost:8000"; // Default value during server-side rendering
 
-API_URL = process.env.API_BASE_URL
-  ? process.env.API_BASE_URL
+API_URL = import.meta.env.VITE_API_BASE_URL
+  ? import.meta.env.VITE_API_BASE_URL
   : "http://localhost:8000";
 
 interface Symbol {

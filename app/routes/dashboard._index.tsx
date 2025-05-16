@@ -14,7 +14,7 @@ import { getInitials } from "~/utils/getInitials";
 export const meta: MetaFunction = () => {
   return [
     {
-      title: "Dashboard | Kite Admin",
+      title: "Dashboard | Algo Admin",
     },
   ];
 };

@@ -7,11 +7,11 @@ export const meta: MetaFunction = () => {
 };
 
 // API server URL - will be updated client-side
-let API_URL = 'http://localhost:8000';
+let API_URL = "http://localhost:8000";
 
-API_URL = process.env.API_BASE_URL
-  ? process.env.API_BASE_URL
-  : 'http://localhost:8000';
+API_URL = import.meta.env.VITE_API_BASE_URL
+  ? import.meta.env.VITE_API_BASE_URL
+  : "http://localhost:8000";
 
 interface Symbol {
   instrument_token: number;
@@ -60,7 +60,7 @@ export default function HistoricalData() {
   useEffect(() => {
     // Set API URL based on window.location (client-side only)
     API_URL = window.location.hostname === "localhost" 
-      ? "http://localhost:3001"
+      ? "http://localhost:8000"
       : "https://your-production-api.com"; // Update with your production API URL
       
     // Check API status on mount
@@ -123,8 +123,17 @@ export default function HistoricalData() {
   const handleSelectSymbol = (symbol: Symbol) => {
     setSelectedSymbol(symbol);
     setInstrumentToken(symbol.instrument_token);
-    setSearchTerm('');
+    setSearchTerm(symbol.tradingsymbol);
     setSymbols([]);
+  };
+
+  // Exchange selection handler
+  const handleExchangeChange = (value: string) => {
+    setSelectedExchange(value);
+    setSymbols([]);
+    setSelectedSymbol(null);
+    setInstrumentToken(null);
+    setSearchTerm('');
   };
   
   // Check API status and load default symbol
@@ -178,8 +187,12 @@ export default function HistoricalData() {
         return;
       }
 
-      const data = await response.json();
-      setHistoricalData(data.data);
+      const responseData = await response.json();
+      if (responseData.status === "success" && responseData.data && responseData.data.candles) {
+        setHistoricalData(responseData.data.candles);
+      } else {
+        throw new Error("Invalid response format from server");
+      }
     } catch (err) {
       console.error("Error fetching historical data:", err);
       setError("Failed to fetch historical data. Using mock data instead.");
@@ -372,7 +385,9 @@ export default function HistoricalData() {
               <div className="mt-2 p-2 bg-slate-50 rounded text-sm">
                 <div className="font-medium">{selectedSymbol.tradingsymbol}</div>
                 <div className="text-xs text-slate-500">
-                  Token: {selectedSymbol.instrument_token} • {selectedSymbol.exchange}
+                  {selectedSymbol.name} • {selectedSymbol.exchange}
+                  {selectedSymbol.expiry && ` • Expiry: ${selectedSymbol.expiry}`}
+                  {selectedSymbol.strike && ` • Strike: ${selectedSymbol.strike}`}
                   {selectedSymbol.lot_size && ` • Lot Size: ${selectedSymbol.lot_size}`}
                 </div>
               </div>
