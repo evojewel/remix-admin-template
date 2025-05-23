@@ -63,7 +63,7 @@ export function TradingViewChart({
       ref={containerRef}
       id={`tradingview_${symbol}`}
       className="w-full h-full"
-      style={{ height: `${height}px`, width: `${width}px` }}
+      style={{ height: `${height}px`, width: `auto` }}
     />
   );
 } 
