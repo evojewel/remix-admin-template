@@ -348,7 +348,7 @@ export default function BreakoutStrategy() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Strategy Configuration Panel */}
         <div className="p-6 bg-white rounded-xl shadow-md">
           <h2 className="mb-4 text-lg font-medium text-slate-900">Strategy Configuration</h2>
@@ -513,20 +513,8 @@ export default function BreakoutStrategy() {
               )}
             </p>
           </div>
-        </div>
+        </div>       
         
-        {/* Price Chart Panel */}
-        <div className="bg-white rounded-lg shadow p-4">
-          <h3 className="text-lg font-semibold mb-4">Price Chart</h3>
-          <div className="h-[400px]">
-            <TradingViewChart 
-              symbol="NSE:NIFTY" 
-              interval="1"
-              theme="light"
-              height={400}
-            />
-          </div>
-        </div>
       </div>
       
       {/* Trading History */}
@@ -579,6 +567,20 @@ export default function BreakoutStrategy() {
           </table>
         </div>
       </div>
+
+      {/* Price Chart Panel */}
+        <div className="bg-white rounded-lg shadow p-4 mt-5">
+          <h3 className="text-lg font-semibold mb-4">Price Chart</h3>
+          <div className="h-[400px] w-full">
+            <TradingViewChart 
+              symbol="NSE:NIFTY" 
+              interval="1"
+              theme="light"
+              height={400}
+              // autosize={true}
+            />
+          </div>
+        </div>
     </div>
   );
 } 

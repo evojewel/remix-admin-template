@@ -59,7 +59,7 @@ export default function TokenGeneration() {
       </h1>
 
       <div className="p-6 bg-white rounded-xl shadow-md">
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-2xl">
           <div className="mb-6">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-gray-700">API Status:</span>
@@ -75,12 +75,13 @@ export default function TokenGeneration() {
             </div>
             
             {apiStatus === "offline" && (
-              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
+              <div className="mb-6 mt-3 p-4 bg-red-50 border border-red-200 rounded-md">
                 <p className="text-sm text-red-700">
                   The API server is offline. Please ensure the API server is running before proceeding.
                 </p>
               </div>
             )}
+          
             
             <div className="p-4 text-sm border rounded-md bg-cyan-50 border-cyan-200">
               <p className="font-medium text-cyan-800">
