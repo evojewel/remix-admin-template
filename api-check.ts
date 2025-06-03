@@ -6,7 +6,7 @@
  */
 
 async function checkApiConnection() {
-  const API_URL = 'http://localhost:8000';
+  const API_URL = 'https://algo-api.evoqins.dev';
   
   console.log('Checking API connection to:', API_URL);
   

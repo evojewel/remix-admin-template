@@ -13,11 +13,11 @@ export const meta: MetaFunction = () => {
 };
 
 // Define API URL based on environment
-let API_URL = "http://localhost:8000";
+let API_URL = "https://algo-api.evoqins.dev";
 
 API_URL = import.meta.env.VITE_API_BASE_URL
   ? import.meta.env.VITE_API_BASE_URL
-  : "http://localhost:8000";
+  : "https://algo-api.evoqins.dev";
 
 interface Symbol {
   instrument_token: number;
@@ -78,7 +78,7 @@ export default function HistoricalData() {
   useEffect(() => {
     API_URL = window.location.hostname === "localhost" 
       ? "http://localhost:8000"
-      : "https://your-production-api.com";
+      : "https://algo-api.evoqins.dev";
       
     checkApiStatus();
   }, []);

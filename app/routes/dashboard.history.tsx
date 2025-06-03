@@ -7,11 +7,11 @@ export const meta: MetaFunction = () => {
 };
 
 // API server URL - will be updated client-side
-let API_URL = "http://localhost:8000";
+let API_URL = "https://algo-api.evoqins.dev";
 
 API_URL = import.meta.env.VITE_API_BASE_URL
   ? import.meta.env.VITE_API_BASE_URL
-  : "http://localhost:8000";
+  : "https://algo-api.evoqins.dev";
 
 interface Symbol {
   instrument_token: number;
@@ -61,7 +61,7 @@ export default function HistoricalData() {
     // Set API URL based on window.location (client-side only)
     API_URL = window.location.hostname === "localhost" 
       ? "http://localhost:8000"
-      : "https://your-production-api.com"; // Update with your production API URL
+      : "https://algo-api.evoqins.dev"; // Update with your production API URL
       
     // Check API status on mount
     checkApiStatus();

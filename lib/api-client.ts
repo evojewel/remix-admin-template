@@ -3,12 +3,12 @@
  */
 
 // Base API URL - will be determined at runtime
-let API_BASE_URL = 'http://localhost:8000';
+let API_BASE_URL = 'https://algo-api.evoqins.dev';
 
-// Use environment variable if available, otherwise use default
+// Use environment variable if available, otherwise use production API
 API_BASE_URL = import.meta.env.VITE_API_BASE_URL
   ? import.meta.env.VITE_API_BASE_URL
-  : 'http://localhost:8000';
+  : 'https://algo-api.evoqins.dev';
 
 // Initialize the API URL based on the environment
 export function initApiClient() {
@@ -16,7 +16,7 @@ export function initApiClient() {
     // Client-side, use the location to determine API URL
     API_BASE_URL = window.location.hostname === 'localhost'
       ? 'http://localhost:8000'
-      : 'https://your-production-api.com';
+      : 'https://algo-api.evoqins.dev';
     console.log('API client initialized with URL:', API_BASE_URL);
   }
 }
@@ -28,8 +28,9 @@ export function getApiBaseUrl() {
 
 // Configure the WebSocket URL
 export function getWebSocketUrl() {
-  // Make sure to remove http:// or https:// and return just the host:port
-  return `ws://${API_BASE_URL.replace(/^https?:\/\//, '')}/ws`;
+  // Use wss:// for https and ws:// for http
+  const protocol = API_BASE_URL.startsWith('https://') ? 'wss://' : 'ws://';
+  return `${protocol}${API_BASE_URL.replace(/^https?:\/\//, '')}/ws`;
 }
 
 // Generic fetch with error handling
