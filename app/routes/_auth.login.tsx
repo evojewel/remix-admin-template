@@ -1,12 +1,13 @@
 import type {
+  ActionFunctionArgs,
   LoaderFunctionArgs,
   MetaFunction,
 } from "@remix-run/node";
-import { redirect } from "@remix-run/node";
-import { Link, useNavigate } from "@remix-run/react";
+import { json, redirect } from "@remix-run/node";
+import { Link, useNavigate, useFetcher } from "@remix-run/react";
 import { useState, useEffect } from "react";
 
-import { getSession } from "../session.server";
+import { getSession, createUserSession } from "../session.server";
 
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -30,10 +31,33 @@ export async function loader({ request }: LoaderFunctionArgs) {
   return null;
 }
 
+export async function action({ request }: ActionFunctionArgs) {
+  const formData = await request.formData();
+  const intent = formData.get("intent") as string;
+  
+  if (intent === "create-session") {
+    const userId = formData.get("userId") as string;
+    const email = formData.get("email") as string;
+    
+    if (!userId || !email) {
+      return json({ error: "Missing user information" }, { status: 400 });
+    }
+    
+    // Create session and redirect to dashboard
+    return createUserSession({
+      request,
+      userId,
+      redirectTo: "/dashboard",
+    });
+  }
+  
+  return json({ error: "Invalid intent" }, { status: 400 });
+}
+
 
 
 export default function LogIn() {
-  const navigate = useNavigate();
+  const fetcher = useFetcher();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [API_URL, setApiUrl] = useState("https://algo-api.evoqins.dev");
@@ -57,7 +81,7 @@ export default function LogIn() {
     const password = formData.get("password") as string;
 
     try {
-      // Call the external API directly (client-side like other components)
+      // Step 1: Call the external API directly (client-side like other components)
       const response = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: {
@@ -76,16 +100,23 @@ export default function LogIn() {
       const loginResult = await response.json();
 
       if (loginResult.success) {
-        // For now, just navigate to dashboard (session will be handled later)
-        navigate("/dashboard");
+        // Step 2: Create session via server-side action and redirect
+        fetcher.submit(
+          {
+            intent: "create-session",
+            userId: loginResult.user_id || email,
+            email: email,
+          },
+          { method: "post" }
+        );
       } else {
         // Show error message from backend
         setError(loginResult.message);
+        setIsSubmitting(false);
       }
     } catch (error) {
       console.error("Login error:", error);
       setError("Login failed. Please check your connection and try again.");
-    } finally {
       setIsSubmitting(false);
     }
   };
