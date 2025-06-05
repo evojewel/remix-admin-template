@@ -25,16 +25,46 @@ export async function action({ request }: ActionFunctionArgs) {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
 
-  // TODO: Implement proper authentication
-  if (email === "admin@example.com" && password === "password") {
-    return createUserSession({
-      request,
-      userId: "1",
-      redirectTo: "/dashboard",
-    });
-  }
+  try {
+    // Determine the API URL (same pattern as historical data component)
+    const isLocalhost = process.env.NODE_ENV === "development";
+    const API_URL = isLocalhost 
+      ? "http://localhost:8000"
+      : "https://algo-api.evoqins.dev:8000";
 
-  return { error: "Invalid email or password" };
+    // Call the backend login API
+    const response = await fetch(`${API_URL}/auth/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email,
+        password,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const loginResult = await response.json();
+
+    if (loginResult.success) {
+      // Create user session if login successful
+      return createUserSession({
+        request,
+        userId: loginResult.user_id,
+        redirectTo: "/dashboard",
+      });
+    } else {
+      // Return error message from backend
+      return { error: loginResult.message };
+    }
+  } catch (error) {
+    console.error("Login error:", error);
+    return { error: "Login failed. Please check your connection and try again." };
+  }
 }
 
 export async function loader({ request }: LoaderFunctionArgs) {
