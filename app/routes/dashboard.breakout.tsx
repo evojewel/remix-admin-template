@@ -93,7 +93,7 @@ export default function BreakoutStrategy() {
         try {
           const data = JSON.parse(event.data);
           console.log("WebSocket message:", data);
-          if (data.type === "initial_state" || data.type === "status_update") {
+          if (data.type === "initial_state" || data.type === "status_update" || data.type === "trading_update") {
             const { strategy, trading, market_status } = data.data;
             setIsRunning(strategy.is_running);
             setMarketStatus(market_status);
