@@ -1,12 +1,12 @@
 import type {
-  ActionFunctionArgs,
   LoaderFunctionArgs,
   MetaFunction,
 } from "@remix-run/node";
 import { redirect } from "@remix-run/node";
-import { Form, Link, useActionData, useNavigation } from "@remix-run/react";
+import { Link, useNavigate } from "@remix-run/react";
+import { useState } from "react";
 
-import { createUserSession, getSession } from "../session.server";
+import { getSession } from "../session.server";
 
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -20,52 +20,7 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-export async function action({ request }: ActionFunctionArgs) {
-  const formData = await request.formData();
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
 
-  try {
-    // Determine the API URL (same pattern as historical data component)
-    const isLocalhost = process.env.NODE_ENV === "development";
-    const API_URL = isLocalhost 
-      ? "http://localhost:8000"
-      : "https://algo-api.evoqins.dev:8000";
-
-    // Call the backend login API
-    const response = await fetch(`${API_URL}/auth/login`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        email,
-        password,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const loginResult = await response.json();
-
-    if (loginResult.success) {
-      // Create user session if login successful
-      return createUserSession({
-        request,
-        userId: loginResult.user_id,
-        redirectTo: "/dashboard",
-      });
-    } else {
-      // Return error message from backend
-      return { error: loginResult.message };
-    }
-  } catch (error) {
-    console.error("Login error:", error);
-    return { error: "Login failed. Please check your connection and try again." };
-  }
-}
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const session = await getSession(request);
@@ -76,9 +31,58 @@ export async function loader({ request }: LoaderFunctionArgs) {
 }
 
 export default function LogIn() {
-  const actionData = useActionData<typeof action>();
-  const navigation = useNavigation();
-  const isSubmitting = navigation.state === "submitting";
+  const navigate = useNavigate();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError(null);
+
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
+
+    try {
+      // Determine the API URL (same pattern as historical data component)
+      const isLocalhost = window.location.hostname === "localhost";
+      const API_URL = isLocalhost 
+        ? "http://localhost:8000"
+        : "https://algo-api.evoqins.dev";
+
+      // Call the backend login API
+      const response = await fetch(`${API_URL}/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const loginResult = await response.json();
+
+      if (loginResult.success) {
+        // Navigate to dashboard on successful login
+        navigate("/dashboard");
+      } else {
+        // Show error message from backend
+        setError(loginResult.message);
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      setError("Login failed. Please check your connection and try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="flex min-h-screen flex-col justify-center py-12 sm:px-6 lg:px-8">
@@ -90,7 +94,7 @@ export default function LogIn() {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white px-4 py-8 shadow sm:rounded-lg sm:px-10">
-          <Form method="post" className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="email">Email address</Label>
               <Input
@@ -112,8 +116,8 @@ export default function LogIn() {
               />
             </div>
 
-            {actionData?.error && (
-              <div className="text-sm text-red-600">{actionData.error}</div>
+            {error && (
+              <div className="text-sm text-red-600">{error}</div>
             )}
 
             <div>
@@ -121,7 +125,7 @@ export default function LogIn() {
                 {isSubmitting ? "Signing in..." : "Sign in"}
               </Button>
             </div>
-          </Form>
+          </form>
         </div>
       </div>
     </div>
