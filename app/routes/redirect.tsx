@@ -23,7 +23,7 @@ export default function KiteRedirect() {
       
       try {
         // Send the request token to your API backend
-        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://algo-api.evoqins.dev'}/token`, {
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://algo-api.evoqins.dev'}/token/api/token-generate`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

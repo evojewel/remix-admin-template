@@ -21,7 +21,7 @@ export default function TokenGeneration() {
     // Check API status
     const checkApiStatus = async () => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://algo-api.evoqins.dev'}/api-status`);
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://algo-api.evoqins.dev'}/token/api-status`);
         if (response.ok) {
           const data = await response.json();
           setApiStatus(data.status);

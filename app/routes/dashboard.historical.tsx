@@ -214,7 +214,7 @@ export default function HistoricalData() {
   // Check API status
   const checkApiStatus = async () => {
     try {
-      const response = await fetch(`${API_URL}/api-status`);
+      const response = await fetch(`${API_URL}/token/api-status`);
       if (response.ok) {
         const data = await response.json();
         setApiStatus(data.status);

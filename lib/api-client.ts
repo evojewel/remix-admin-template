@@ -73,7 +73,7 @@ export async function apiFetch<T = any>(
 // API methods for common operations
 export const api = {
   // Check API status
-  checkStatus: () => apiFetch<{status: 'online' | 'offline' | 'checking'}>('/api-status', {
+  checkStatus: () => apiFetch<{status: 'online' | 'offline' | 'checking'}>('/token/api-status', {
     method: 'GET'
   }),
   

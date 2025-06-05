@@ -12,8 +12,8 @@ async function checkApiConnection() {
   
   try {
     // First check API status
-    console.log('\nTesting /api-status endpoint:');
-    const statusResponse = await fetch(`${API_URL}/api-status`);
+    console.log('\nTesting /token/api-status endpoint:');
+    const statusResponse = await fetch(`${API_URL}/token/api-status`);
     if (statusResponse.ok) {
       const statusData = await statusResponse.json();
       console.log('✅ API Status Response:', statusData);
