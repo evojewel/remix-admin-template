@@ -127,14 +127,14 @@ export default function HistoricalData() {
     setSymbols([]);
   };
 
-  // Exchange selection handler
-  const handleExchangeChange = (value: string) => {
-    setSelectedExchange(value);
-    setSymbols([]);
-    setSelectedSymbol(null);
-    setInstrumentToken(null);
-    setSearchTerm('');
-  };
+  // Exchange selection handler (currently unused but kept for future functionality)
+  // const handleExchangeChange = (value: string) => {
+  //   setSelectedExchange(value);
+  //   setSymbols([]);
+  //   setSelectedSymbol(null);
+  //   setInstrumentToken(0);
+  //   setSearchTerm('');
+  // };
   
   // Check API status and load default symbol
   const checkApiStatus = async () => {

@@ -1,6 +1,7 @@
 [build]
 command = "npm run build"
 publish = "build/client"
+environment = { VITE_API_BASE_URL = "https://algo-api.evoqins.dev" }
 
 [dev]
 command = "npm run dev"

@@ -33,7 +33,8 @@ async function checkApiConnection() {
     
     // Try WebSocket connection
     console.log('\nTesting WebSocket connection:');
-    const ws = new WebSocket(`ws://${API_URL.replace('http://', '')}/ws`);
+    const protocol = API_URL.startsWith('https://') ? 'wss://' : 'ws://';
+    const ws = new WebSocket(`${protocol}${API_URL.replace(/^https?:\/\//, '')}/ws`);
     
     ws.onopen = () => {
       console.log('✅ WebSocket connected successfully');
