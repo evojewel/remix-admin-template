@@ -51,7 +51,9 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
       <div className="flex flex-1 flex-col overflow-y-auto">
         <nav className="flex-1 space-y-1 px-2 py-4 bg-white">
           {navigation.map((item) => {
-            const isActive = location.pathname.startsWith(item.href);
+            // Exact match or nested path, but avoid false positives like
+            // "/dashboard/backtest-5min" matching "/dashboard/backtest"
+            const isActive = location.pathname === item.href || location.pathname.startsWith(item.href + "/");
             return (
               <Link
                 key={item.name}
