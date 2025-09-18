@@ -694,11 +694,14 @@ export default function BacktestStrategy() {
                   <thead className="bg-slate-50">
                     <tr>
                       <th className="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Date</th>
+                      <th className="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Highest High (HH)</th>
+                      <th className="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Lowest Low (LL)</th>
                       <th className="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Position</th>
                       <th className="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Entry Price</th>
                       <th className="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Exit Price</th>
+                      <th className="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Breakout Entry Time</th>
+                      <th className="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Exit Time</th>
                       <th className="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">P/L</th>
-                      <th className="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Day Change</th>
                       <th className="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">SL Hit</th>
                       <th className="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Target Hit</th>
                     </tr>
@@ -707,6 +710,8 @@ export default function BacktestStrategy() {
                     {backtestResults.results.map((result, index) => (
                       <tr key={index} className="hover:bg-slate-50">
                         <td className="px-3 py-2 whitespace-nowrap text-sm text-slate-900">{formatDate(result.date)}</td>
+                        <td className="px-3 py-2 whitespace-nowrap text-sm text-slate-900">{result.high?.toFixed(2)}</td>
+                        <td className="px-3 py-2 whitespace-nowrap text-sm text-slate-900">{result.low?.toFixed(2)}</td>
                         <td className="px-3 py-2 whitespace-nowrap text-sm">
                           <span className={`inline-flex rounded-full px-2 text-xs font-semibold ${result.position === "LONG"
                             ? "bg-cyan-100 text-cyan-800"
@@ -717,6 +722,8 @@ export default function BacktestStrategy() {
                         </td>
                         <td className="px-3 py-2 whitespace-nowrap text-sm text-slate-900">{result.entry_price.toFixed(2)}</td>
                         <td className="px-3 py-2 whitespace-nowrap text-sm text-slate-900">{result.exit_price.toFixed(2)}</td>
+                        <td className="px-3 py-2 whitespace-nowrap text-sm text-slate-900">{result.entry_time ? new Date(result.entry_time).toLocaleTimeString() : "—"}</td>
+                        <td className="px-3 py-2 whitespace-nowrap text-sm text-slate-900">{result.exit_time ? new Date(result.exit_time).toLocaleTimeString() : "—"}</td>
                         <td className="px-3 py-2 whitespace-nowrap text-sm font-medium">
                           <span className={`${result.profit_loss > 0
                             ? "text-green-600"
@@ -726,30 +733,6 @@ export default function BacktestStrategy() {
                             }`}>
                             {result.profit_loss.toFixed(2)}
                           </span>
-                        </td>
-                        <td className="px-3 py-2 whitespace-nowrap text-sm">
-                          {result.day_change !== undefined && (
-                            <div>
-                              <span className={`${result.day_change > 0
-                                ? "text-green-600"
-                                : result.day_change < 0
-                                  ? "text-red-600"
-                                  : "text-slate-600"
-                                }`}>
-                                {result.day_change.toFixed(2)}
-                              </span>
-                              {result.day_change_percent !== undefined && (
-                                <span className={`ml-1 text-xs ${result.day_change > 0
-                                  ? "text-green-600"
-                                  : result.day_change < 0
-                                    ? "text-red-600"
-                                    : "text-slate-600"
-                                  }`}>
-                                  ({result.day_change_percent.toFixed(2)}%)
-                                </span>
-                              )}
-                            </div>
-                          )}
                         </td>
                         <td className="px-3 py-2 whitespace-nowrap text-sm">
                           {result.stop_loss_hit ? (
