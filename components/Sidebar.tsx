@@ -10,6 +10,7 @@ const navigation = [
   { name: "Breakout", href: "/dashboard/breakout" },
   { name: "Historical", href: "/dashboard/historical" },
   { name: "Backtest", href: "/dashboard/backtest" },
+  { name: "Algo 2 Backtest", href: "/dashboard/backtest-5min" },
   { name: "API Token", href: "/dashboard/token" },
 ]
 

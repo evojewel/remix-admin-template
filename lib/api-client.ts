@@ -110,6 +110,12 @@ export const api = {
     method: 'POST',
     body: JSON.stringify(params),
   }),
+
+  // Run Algo 2 (5-min) backtest
+  runBacktest5Min: (params: any) => apiFetch('/backtest_5min', {
+    method: 'POST',
+    body: JSON.stringify(params),
+  }),
   
   // Get historical data
   getHistoricalData: (params: any) => apiFetch('/historical-data', {
